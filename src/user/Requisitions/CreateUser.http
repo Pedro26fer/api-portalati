@@ -1,0 +1,10 @@
+
+
+POST http://localhost:3000/api/user/sign_up
+Content-Type: application/json
+{
+    "pNome": "Pedro Henrique",
+    "uNome": "Fernandes de Andrade",
+    "email": "p2698fernandes@gmail.com",
+    "password": "1q2w3e4r"
+}
