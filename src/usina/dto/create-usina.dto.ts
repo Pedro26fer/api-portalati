@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsNumber, IsDate, IsBoolean } from "class-validator";
+import { Entidade } from "src/entidade/entidade.entity";
 
 export class CreateUsinaDto {
 
@@ -17,11 +18,16 @@ export class CreateUsinaDto {
     @IsOptional()
     aceito?: boolean
 
-    constructor(nome: string, skids: number, data_aceite?: Date, aceito?: boolean){
+
+    @IsString({ message: 'O nome da entidade deve ser uma string' })
+    entidade: string;
+
+    constructor(nome: string, skids: number, entidade: string, data_aceite?: Date, aceito?: boolean,){
         this.nome  = nome
         this.skids = skids
         this.data_aceite = data_aceite
         this.aceito = aceito
+        this.entidade = entidade
     }
 
 }

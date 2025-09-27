@@ -9,12 +9,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUsinaDto } from './dto/create-usina.dto';
 import { UpdateUsinaDto } from './dto/update-usina.dto';
+import { Entidade } from 'src/entidade/entidade.entity';
 
 @Injectable()
 export class UsinaService {
   constructor(
     @InjectRepository(Usina)
     private readonly usinaRepository: Repository<Usina>,
+    @InjectRepository(Entidade)
+    private readonly entidadeRepository: Repository<Entidade>,
   ) {}
 
   async createUsina(createUsinadto: CreateUsinaDto): Promise<Usina> {
@@ -27,17 +30,24 @@ export class UsinaService {
       );
     }
 
-    const newUsina = await this.usinaRepository.save(createUsinadto);
+    const { entidade } = createUsinadto;
+
+    const entidadeBuscada = await this.entidadeRepository.findOne({where: {nome: entidade}})
+    if(!entidadeBuscada){
+        throw new NotFoundException('Entidade não encontrada')
+    }
+
+    const newUsina = await this.usinaRepository.save({...createUsinadto, entidade: entidadeBuscada});
 
     return newUsina;
   }
 
   async findAll(): Promise<Usina[]> {
-    return await this.usinaRepository.find();
+    return await this.usinaRepository.find({relations: ['entidade']});
   }
 
   async specificUsina(id: string): Promise<Usina> {
-    const usina = await this.usinaRepository.findOne({ where: { id } });
+    const usina = await this.usinaRepository.findOne({ where: { id }, relations: ['entidade'] });
     if (!usina) {
       throw new NotFoundException('Usina não encontrada');
     }
@@ -71,19 +81,28 @@ export class UsinaService {
     if (updateUsinaDto.data_aceite) {
       if (updateUsinaDto.data_aceite > dataAtual) {
         throw new ForbiddenException(
-          'A data de aceite não ´pde ser maior que a data atual',
+          'A data de aceite não pode ser maior que a data atual',
         );
       } else {
         usinaToUpdate.aceito = true;
       }
     }
 
-    const usinaUpadated = await this.usinaRepository.save({
+    if (updateUsinaDto.entidade) {
+      const entidadeBuscada = await this.entidadeRepository.findOne({where: {nome: updateUsinaDto.entidade}})
+      if(!entidadeBuscada){
+          throw new NotFoundException('Entidade não encontrada')
+      }
+      usinaToUpdate.entidade = entidadeBuscada;
+    }
+
+    const usinaUpdated = await this.usinaRepository.save({
       ...usinaToUpdate,
       ...updateUsinaDto,
+      entidade: usinaToUpdate.entidade,
     });
 
-    return usinaUpadated;
+    return usinaUpdated;
   }
 
   async removeUsina(id: string): Promise<void> {

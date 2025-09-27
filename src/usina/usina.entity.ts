@@ -1,4 +1,5 @@
-import { Column, PrimaryGeneratedColumn, Entity, CreateDateColumn } from "typeorm";
+import { Entidade } from "src/entidade/entidade.entity";
+import { Column, PrimaryGeneratedColumn, Entity, CreateDateColumn, ManyToOne } from "typeorm";
 import { v4 as uuidv4 } from 'uuid';
 
 @Entity('usina')
@@ -25,13 +26,18 @@ export class Usina{
     aceito: boolean 
 
 
+    @ManyToOne(() => Entidade, entidade => entidade.usinas)
+    entidade: Entidade;
 
-    constructor(nome: string, data_inicio: Date, data_aceite: Date, skids: number){
+
+
+    constructor(nome: string, data_inicio: Date, data_aceite: Date, skids: number, entidade: Entidade){
         this.nome = nome
         this.skids = skids
         this.data_inicio = data_inicio
         this.data_aceite = data_aceite
         this.aceito = false
+        this.entidade = entidade
         this.id = uuidv4()
         
     }
