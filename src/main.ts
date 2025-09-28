@@ -6,8 +6,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
+    origin: 'http://localhost:3000', // 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
   });
 
   app.useGlobalPipes(
@@ -20,7 +20,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Servidor rodando na porta ${port}`);
   console.log(`📚 API disponível em: http://localhost:${port}/api`);
