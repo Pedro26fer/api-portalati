@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { UsinaModule } from './usina/usina.module';
 import { EntidadeModule } from './entidade/entidade.module';
+import { EquipeModule } from './equipe/equipe.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EntidadeModule } from './entidade/entidade.module';
     AuthModule,
     UsinaModule,
     EntidadeModule,
+    EquipeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

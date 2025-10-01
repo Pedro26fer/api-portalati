@@ -9,6 +9,8 @@ export interface JWTPayload {
   userId: string;
   email: string;
   pNome: string;
+  entidade: string | null;
+  equipe: string | null;
 }
 
 export interface LoginResponse {
@@ -17,6 +19,8 @@ export interface LoginResponse {
     id: number;
     pNome: string;
     email: string;
+    entidade: string | null;
+    equipe: string | null;
   };
 }
 
@@ -55,6 +59,8 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       pNome: user.pNome,
+      entidade: user.entidade ? user.entidade.nome : null,
+      equipe: user.equipe ? user.equipe.nome : null,
     };
 
     return {
@@ -63,6 +69,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         pNome: user.pNome,
+        entidade: user.entidade ? user.entidade.nome : null,
+        equipe: user.equipe ? user.equipe.nome : null,
       },
     };
   }
