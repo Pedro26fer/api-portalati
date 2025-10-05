@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { LoginDTO } from './dto/login.dto';
@@ -26,18 +26,22 @@ export interface LoginResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
+    this.logger.log(`Validando usuário com email: ${email}`);
     const user = await this.userService.findByEmail(email);
 
     if (user && (await bcrypt.compare(password, user.password))) {
+      this.logger.log(`Usuário validado com sucesso: ${email}`);
       const { password, ...result } = user;
       return result;
     }
+    this.logger.warn(`Falha na validação do usuário: ${email}`);
     return null;
   }
 
@@ -49,6 +53,7 @@ export class AuthService {
     }
 
     if(!user.isActive){
+      this.logger.warn(`Tentativa de login com usuário inativo: ${loginDto.email}`);
       throw new ConflictException('Usuário se encontra inativo')
     }
 
@@ -76,9 +81,11 @@ export class AuthService {
   }
 
   async validateToken(jwtPayload: JWTPayload): Promise<User> {
+    this.logger.log(`Validando token para usuário ID: ${jwtPayload.userId}`);
     const user = await this.userService.getUserById(jwtPayload.userId);
 
     if (!user) {
+      this.logger.warn(`Token inválido para usuário ID: ${jwtPayload.userId}`);
       throw new UnauthorizedException('Token inválido');
     }
 

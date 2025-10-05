@@ -1,11 +1,12 @@
 import { NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { CreateUsuarioDto } from './dto/createUsuarioDto.dto';
 import { UpdateUserDTO } from './dto/updateUsuarioDto.dto';
+import { Equipe } from 'src/equipe/equipe.entity';
 
 @Injectable()
 export class UserService {
@@ -13,6 +14,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Equipe)
+    private equipeRepository: Repository<Equipe>,
   ) {}
 
   async createUser(createUsuarioDto: CreateUsuarioDto): Promise<User> {
@@ -29,24 +32,40 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await this.userRepository.create({
+    let equipes: Equipe[] = [];
+    if (createUsuarioDto.equipes) {
+      equipes = await Promise.all(
+        createUsuarioDto.equipes.map(async (equipeName) => {
+          const equipe = await this.equipeRepository.findOne({ where: { nome: equipeName } });
+          if (!equipe) {
+            this.logger.warn(`Equipe não encontrada: ${equipeName}`);
+            throw new NotFoundException(`Equipe não encontrada: ${equipeName}`);
+          }
+          return equipe;
+        })
+      );
+    }
+
+    const newUser = this.userRepository.create({
       ...createUsuarioDto,
       password: hashedPassword,
+      equipes: equipes
     });
     this.logger.log(`Usuário criado com sucesso: ${email}`);
 
     await this.userRepository.save(newUser);
     return newUser;
-  }
+
+}
 
   async getAllUsers(): Promise<User[]> {
     this.logger.log('Buscando todos os usuários...');
-    return await this.userRepository.find();
+    return await this.userRepository.find({relations: ['equipes', 'equipes.entidade']});
   }
 
   async getUserById(id: string): Promise<User> {
     this.logger.log(`Buscando usuário com ID: ${id}`);
-    const user = await this.userRepository.findOneOrFail({ where: { id } });
+    const user = await this.userRepository.findOneOrFail({ where: { id }, relations: ['equipes', 'equipes.entidade'] });
     if (!user) {
       this.logger.warn(`Usuário não encontrado com ID: ${id}`);
       throw new NotFoundException('Usuário não encontrado');
@@ -63,6 +82,18 @@ export class UserService {
     }
     userToInactivate.isActive = false
     await this.userRepository.save(userToInactivate);
+  }
+
+  async activateUser(id: string): Promise<void> {
+    this.logger.log(`Ativando usuário com ID: ${id}`);
+    const userToActivate = await this.getUserById(id);
+    if(userToActivate.isActive){
+      this.logger.warn(`Tentativa de ativar usuário já ativo com ID: ${id}`);
+      throw new ForbiddenException('Usuário já está ativo')
+    }
+    userToActivate.isActive = true
+    this.logger.log(`Usuário com ID: ${id} ativado com sucesso`);
+    await this.userRepository.save(userToActivate);
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -104,16 +135,31 @@ export class UserService {
         updatePersonalInfo.password = hashedNewPassword;
     }
 
-    
-    return await this.userRepository.save({...user,...updatePersonalInfo});
+    if(updatePersonalInfo.equipes){
+      const equipes: Equipe[] = await Promise.all(
+        updatePersonalInfo.equipes.map(async (equipeName) => {
+          const equipe = await this.equipeRepository.findOne({where: {nome: equipeName}});
+          if(!equipe){
+            this.logger.warn(`Equipe não encontrada: ${equipeName}`);
+            throw new NotFoundException(`Equipe não encontrada: ${equipeName}`);
+          }
+          return equipe;
+        })
+      );
+      user.equipes = equipes;
+    }
+    return await this.userRepository.save({...user,...updatePersonalInfo, equipes: user.equipes});
   }
 
   async findByEmail(email:string): Promise<User>{
     this.logger.log(`Buscando usuário com email: ${email}`);
-    const user =  await this.userRepository.findOne({where: {email, isActive: true}});
+    const user =  await this.userRepository.findOne({where: {email}});
     if(!user){
         this.logger.warn(`Usuário não encontrado com email: ${email}`);
         throw new NotFoundException('Usuário não encontrado');
+    } else if (!user.isActive) {
+        this.logger.warn(`Usuário inativo com email: ${email}`);
+        throw new ConflictException('Usuário se encontra inativo')
     }
 
 
