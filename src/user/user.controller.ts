@@ -50,10 +50,17 @@ export class UserController {
         return this.userService.updateLastAccess(id, dataLocal);
     }
 
+    @Patch('activate/:id')
+    @UseGuards(JwtAuthGuard)
+    async activateUser(@Param('id') id: string) : Promise<void>{
+        await this.userService.activateUser(id);
+    }
+    
+
     @Delete('delete/:id')
     @UseGuards(JwtAuthGuard)
     async deleteUser(@Param('id') id: string): Promise<void> {
-        return this.userService.deleteUser(id);
+        await this.userService.deleteUser(id);
     }
 
     @Patch('update-personal-info/:id')

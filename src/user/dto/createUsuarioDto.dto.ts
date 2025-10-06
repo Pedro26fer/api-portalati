@@ -1,4 +1,5 @@
-import { IsEmail, IsString, IsUrl, IsNotEmpty, IsOptional, MinLength } from "class-validator";
+import { IsEmail, IsString, IsUrl, IsNotEmpty, IsOptional, MinLength, IsArray } from "class-validator";
+import { Equipe } from "src/equipe/equipe.entity";
 
 export class CreateUsuarioDto {
     @IsString()
@@ -12,6 +13,9 @@ export class CreateUsuarioDto {
     @IsEmail()
     email!: string;
 
+    @IsOptional()
+    isActive?: boolean;
+
     @IsString()
     @MinLength(6, {message: 'A senha deve ter no mínimo 6 caracteres'})
     password!: string;
@@ -20,4 +24,8 @@ export class CreateUsuarioDto {
     @IsUrl(undefined, {message: "A foto de perfil deve ser uma URL válida"})
     @IsOptional()
     fotoPerfil?: string
+
+    @IsOptional()
+    @IsArray({message: 'As equipes devem ser um array de strings'})
+    equipes?: string[]
 }

@@ -1,4 +1,5 @@
 import { Entidade } from "src/entidade/entidade.entity";
+import { Equipe } from "src/equipe/equipe.entity";
 import { Column, PrimaryGeneratedColumn, Entity, CreateDateColumn, ManyToOne } from "typeorm";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -28,7 +29,6 @@ export class Usina{
 
     @ManyToOne(() => Entidade, entidade => entidade.usinas)
     entidade: Entidade;
-
 
 
     constructor(nome: string, data_inicio: Date, data_aceite: Date, skids: number, entidade: Entidade){
