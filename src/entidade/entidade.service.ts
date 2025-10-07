@@ -50,12 +50,12 @@ export class EntidadeService {
 
     async findAll(): Promise<Entidade[]>{
         this.logger.log('Listando todas as entidades')
-        return await this.entidadeRepository.find()
+        return await this.entidadeRepository.find({relations: ['equipes']})
     }
 
     async profile(id: string): Promise<Entidade>{
         this.logger.log('Busacando um entidde  em específico')
-        const entidade = await this.entidadeRepository.findOne({where: {id}})
+        const entidade = await this.entidadeRepository.findOne({where: {id}, relations: ['equipes', 'equipes.supervisor', 'equipes.integrantes']})
 
         if (!entidade) {
             this.logger.error('Entidade não encontrada')

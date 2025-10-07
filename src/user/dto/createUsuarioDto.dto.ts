@@ -26,6 +26,6 @@ export class CreateUsuarioDto {
     fotoPerfil?: string
 
     @IsOptional()
-    @IsArray({message: 'As equipes devem ser um array de strings'})
-    equipes?: string[]
+    @IsString({message: 'As equipes devem ser uma string'})
+    equipe?: string 
 }

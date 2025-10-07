@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateEquipeDto{
     
@@ -18,4 +18,7 @@ export class CreateEquipeDto{
     @IsString({message: 'O supervisor deve ser uma string'})
     supervisor!: string;
 
+    @IsOptional()
+    @IsString({message: 'A equipe pai deve ser uma string'})
+    parent_equipe?: string;
 }

@@ -7,6 +7,8 @@ import * as bcrypt from 'bcryptjs';
 import { CreateUsuarioDto } from './dto/createUsuarioDto.dto';
 import { UpdateUserDTO } from './dto/updateUsuarioDto.dto';
 import { Equipe } from 'src/equipe/equipe.entity';
+import { EquipeService } from 'src/equipe/equipe.service';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class UserService {
@@ -20,7 +22,7 @@ export class UserService {
 
   async createUser(createUsuarioDto: CreateUsuarioDto): Promise<User> {
     this.logger.log('Criando usuário...');
-    const { email, password, pNome, uNome, fotoPerfil } = createUsuarioDto;
+    const { email, password, pNome, uNome, fotoPerfil, equipe } = createUsuarioDto;
 
     const existingUser = await this.userRepository.findOne({
       where: { email },
@@ -32,25 +34,25 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    let equipes: Equipe[] = [];
-    if (createUsuarioDto.equipes) {
-      equipes = await Promise.all(
-        createUsuarioDto.equipes.map(async (equipeName) => {
-          const equipe = await this.equipeRepository.findOne({ where: { nome: equipeName } });
-          if (!equipe) {
-            this.logger.warn(`Equipe não encontrada: ${equipeName}`);
-            throw new NotFoundException(`Equipe não encontrada: ${equipeName}`);
-          }
-          return equipe;
-        })
-      );
+    let resolvedEquipe = undefined;
+
+    if (equipe) {
+      const realEquipe = await this.equipeRepository.findOne({ where: { nome: equipe } });
+      if (!realEquipe) {
+        this.logger.warn(`Equipe não encontrada: ${equipe}`);
+        throw new NotFoundException('Equipe não encontrada');
+      }
+      resolvedEquipe = realEquipe;
+
     }
 
     const newUser = this.userRepository.create({
       ...createUsuarioDto,
       password: hashedPassword,
-      equipes: equipes
+      equipe: resolvedEquipe
     });
+
+    
     this.logger.log(`Usuário criado com sucesso: ${email}`);
 
     await this.userRepository.save(newUser);
@@ -60,12 +62,15 @@ export class UserService {
 
   async getAllUsers(): Promise<User[]> {
     this.logger.log('Buscando todos os usuários...');
-    return await this.userRepository.find({relations: ['equipes', 'equipes.entidade']});
+    return await this.userRepository.find({relations: ['equipe', 'equipe.entidade','equipe_supervisionada']});
   }
 
   async getUserById(id: string): Promise<User> {
     this.logger.log(`Buscando usuário com ID: ${id}`);
-    const user = await this.userRepository.findOneOrFail({ where: { id }, relations: ['equipes', 'equipes.entidade'] });
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['equipe', 'equipe.entidade'] });
+    if(!user){
+      throw new NotFoundException('Usuário não encontrado')
+    }
     if (!user) {
       this.logger.warn(`Usuário não encontrado com ID: ${id}`);
       throw new NotFoundException('Usuário não encontrado');
@@ -135,25 +140,23 @@ export class UserService {
         updatePersonalInfo.password = hashedNewPassword;
     }
 
-    if(updatePersonalInfo.equipes){
-      const equipes: Equipe[] = await Promise.all(
-        updatePersonalInfo.equipes.map(async (equipeName) => {
-          const equipe = await this.equipeRepository.findOne({where: {nome: equipeName}});
-          if(!equipe){
-            this.logger.warn(`Equipe não encontrada: ${equipeName}`);
-            throw new NotFoundException(`Equipe não encontrada: ${equipeName}`);
-          }
-          return equipe;
-        })
-      );
-      user.equipes = equipes;
+    if(updatePersonalInfo.equipe){
+        const equipe = await this.equipeRepository.findOne({ where: { nome: updatePersonalInfo.equipe } });
+        if(!equipe){
+            this.logger.warn(`Equipe não encontrada: ${updatePersonalInfo.equipe}`);
+            throw new NotFoundException(`Equipe não encontrada: ${updatePersonalInfo.equipe}`);
+        }else if(equipe.supervisor == user){
+            this.logger.warn(`Usuário é supervisor da equipe: ${updatePersonalInfo.equipe}, não pode ser integrante`);
+            throw new ForbiddenException(`Usuário já é supervisor da equipe: ${updatePersonalInfo.equipe}, não pode ser integrante`);
+        }
+        user.equipe = equipe;
     }
-    return await this.userRepository.save({...user,...updatePersonalInfo, equipes: user.equipes});
+    return await this.userRepository.save({...user,...updatePersonalInfo, equipe: user.equipe});
   }
 
   async findByEmail(email:string): Promise<User>{
     this.logger.log(`Buscando usuário com email: ${email}`);
-    const user =  await this.userRepository.findOne({where: {email}});
+    const user =  await this.userRepository.findOne({where: {email}, relations: ['equipe', 'equipe.entidade']});
     if(!user){
         this.logger.warn(`Usuário não encontrado com email: ${email}`);
         throw new NotFoundException('Usuário não encontrado');
@@ -170,3 +173,4 @@ export class UserService {
 
 
 }
+

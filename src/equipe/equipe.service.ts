@@ -11,7 +11,7 @@ import { Entidade } from 'src/entidade/entidade.entity';
 import { CreateEquipeDto } from './dto/create-equipe.dto';
 import { UpdateEquipeDto } from './dto/update-equipe.dto';
 import { User } from 'src/user/user.entity';
-
+import { plainToInstance } from 'class-transformer';
 @Injectable()
 export class EquipeService {
   constructor(
@@ -24,7 +24,10 @@ export class EquipeService {
   ) {}
 
   async create(createEquipeDto: CreateEquipeDto): Promise<Equipe> {
-    const { nome, supervisor, entidade } = createEquipeDto;
+    const { nome, supervisor, entidade, parent_equipe } = createEquipeDto;
+    const newEquipe = await this.equipeRepository.create();
+
+    newEquipe.nome = nome;
 
     const entidadeReal = await this.entidadeRepository.findOne({
       where: { nome: entidade },
@@ -35,10 +38,17 @@ export class EquipeService {
         'Entidade não encontrada, cadastre-a primeiro',
       );
     }
+    newEquipe.entidade = entidadeReal;
 
-    const supervisorName = await this.userRepository.findOneOrFail({
+    const supervisorName = await this.userRepository.findOne({
       where: { pNome: supervisor },
     });
+
+    if (!supervisorName) {
+      throw new NotFoundException('Supervisor não encontrado');
+    }
+
+    newEquipe.supervisor = supervisorName;
 
     const equipeAlreadyExists = await this.equipeRepository.findOne({
       where: { nome },
@@ -48,72 +58,136 @@ export class EquipeService {
       throw new ForbiddenException('Já existe uma equipe com esse nome');
     }
 
-    const newEquipe = await this.equipeRepository.create({
-      ...createEquipeDto,
-      entidade: entidadeReal,
-      supervisor: supervisorName,
-    });
+    if (parent_equipe) {
+      const parentEquip = await this.equipeRepository.findOne({
+        where: { nome: parent_equipe },
+      });
+      if (!parentEquip) {
+        throw new NotFoundException('Equipe pai não encontrada');
+      }
 
-    return await this.equipeRepository.save(newEquipe);
+      newEquipe.parent_equipe = parentEquip;
+
+      if (parentEquip.supervisor == supervisorName) {
+        throw new ForbiddenException(
+          'O supervisor não pode ser o mesmo da equipe pai',
+        );
+      }
+    }
+    const savedEquipe = await this.equipeRepository.save(newEquipe);
+
+    supervisorName.equipe_supervisionada = savedEquipe;
+    supervisorName.equipe = savedEquipe;
+    await this.userRepository.save(supervisorName);
+
+    return plainToInstance(Equipe, savedEquipe, { excludeExtraneousValues: true });
   }
 
   async findAll(): Promise<Equipe[]> {
-    return await this.equipeRepository.find({ relations: ['entidade', 'supervisor', 'integrantes'] });
+    return await this.equipeRepository.find({
+      relations: ['entidade', 'supervisor', 'integrantes', 'parent_equipe', 'sub_equipes.integrantes',],
+    });
   }
 
   async findById(id: string): Promise<Equipe> {
-    const equipe = await this.equipeRepository.findOne({ where: { id }, relations: ['entidade','supervisor'] });
+    const equipe = await this.equipeRepository.findOne({
+      where: { id },
+      relations: ['entidade', 'supervisor', 'integrantes', 'sub_equipes'],
+    });
     if (!equipe) {
       throw new NotFoundException('Equipe não encontrada');
     }
     return equipe;
   }
 
-  async updateEquipe(id: string, updateEquipeDto: UpdateEquipeDto): Promise<Equipe>{
-    const equipe = await this.findById(id);
-
-    const {nome, nivel, entidade, supervisor} = equipe;
-
-    const nomeLareadyExists = await this.equipeRepository.findOne({ where: { nome } });
-
-    if (nomeLareadyExists && nomeLareadyExists.id !== id) {
-      throw new ForbiddenException('Já existe uma equipe com esse nome');
-    }
-
-    const entidadeReal = await this.entidadeRepository.findOne({
-      where: { nome: entidade.nome },
+  async findByName(nome: string): Promise<Equipe> {
+    const equipe = await this.equipeRepository.findOne({
+      where: { nome },
+      relations: ['entidade', 'supervisor'],
     });
-
-    if (!entidadeReal) {
-      throw new NotFoundException(
-        'Entidade não encontrada, cadastre-a primeiro',
-      );
+    if (!equipe) {
+      throw new NotFoundException('Equipe não encontrada');
     }
-
-    if (updateEquipeDto.supervisor) {
-      const supervisorReal = await this.userRepository.findOne({ where: { pNome: updateEquipeDto.supervisor } });
-      if (!supervisorReal) {
-        throw new NotFoundException('Supervisor não encontrado');
-      }
-      const supervisorDeOutraEquipe = await this.equipeRepository.findOne({where: {supervisor: supervisorReal}})
-      if(supervisorDeOutraEquipe){
-        throw new ForbiddenException('Esse usuário já é supervisor de outra equipe')
-      }
-      equipe.supervisor = supervisorReal;
-
-    }
-
-
-    await this.equipeRepository.update(id, {
-      ...updateEquipeDto,
-      entidade: entidadeReal,
-      supervisor: equipe.supervisor, 
-    });
-
-    return await this.findById(id);
+    return plainToInstance(Equipe, equipe, { excludeExtraneousValues: true });
   }
 
-  async removeEquipe(id: string): Promise<void>{
+  async updateEquipe(
+    id: string,
+    updateEquipeDto: UpdateEquipeDto,
+  ): Promise<Equipe> {
+    const equipe = await this.findById(id);
+
+    if (!equipe) {
+      throw new NotFoundException('Equipe não encontrada');
+    }
+
+    if (updateEquipeDto.nome) {
+      const equipeWithSameName = await this.equipeRepository.findOneOrFail({
+        where: { nome: updateEquipeDto.nome },
+      });
+      if (equipeWithSameName.id !== id) {
+        throw new ForbiddenException('Já existe uma equipe com esse nome');
+      } else if (equipeWithSameName.id === id) {
+        throw new ForbiddenException('Esse é o nome atual da equipe');
+      } else {
+        equipe.nome = updateEquipeDto.nome;
+      }
+
+      if (updateEquipeDto.nivel) {
+        equipe.nivel = updateEquipeDto.nivel;
+      }
+
+      if (updateEquipeDto.supervisor) {
+        const supervisor = await this.userRepository.findOne({
+          where: { pNome: updateEquipeDto.supervisor },
+        });
+
+        if (!supervisor) {
+          throw new NotFoundException('Supervisor não encontrado');
+        } else if (
+          supervisor.id === equipe.supervisor.id &&
+          equipe.supervisor !== null
+        ) {
+          throw new ForbiddenException('Esse é o supervisor atual da equipe');
+        } else if (supervisor.equipe_supervisionada) {
+          throw new ForbiddenException(
+            'Esse supervisor já está supervisionando outra equipe',
+          );
+        }
+        equipe.supervisor = supervisor;
+      }
+
+      if (updateEquipeDto.entidade) {
+        const entidade = await this.entidadeRepository.findOne({
+          where: { nome: updateEquipeDto.entidade },
+        });
+
+        if (!entidade) {
+          throw new NotFoundException('Entidade não encontrada');
+        }
+        equipe.entidade = entidade;
+      }
+    }
+
+    if( updateEquipeDto.parent_equipe ) {
+      const parentEquipe = await this.equipeRepository.findOne({
+        where: { nome: updateEquipeDto.parent_equipe },
+      });
+      if (!parentEquipe) {
+        throw new NotFoundException('Equipe pai não encontrada');
+      }
+      equipe.parent_equipe = parentEquipe;
+      if (parentEquipe.supervisor == equipe.supervisor) {
+        throw new ForbiddenException(
+          'O supervisor não pode ser o mesmo da equipe pai',
+        );
+      }
+    }
+    const novaEquipe = await this.equipeRepository.save(equipe);
+    return plainToInstance(Equipe, novaEquipe, { excludeExtraneousValues: true });
+  }
+
+  async removeEquipe(id: string): Promise<void> {
     const equipeToRemove = await this.findById(id);
     await this.equipeRepository.remove(equipeToRemove);
   }

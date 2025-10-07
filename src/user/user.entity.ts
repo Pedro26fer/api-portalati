@@ -7,9 +7,11 @@ import {
   ManyToMany,
   JoinTable,
   OneToOne,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-
+import {Exclude} from 'class-transformer';
 @Entity('usuario')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -24,6 +26,7 @@ export class User {
   @Column({ unique: false, nullable: false })
   email!: string;
 
+  @Exclude()
   @Column({ nullable: false })
   password!: string;
 
@@ -39,19 +42,9 @@ export class User {
   @Column({ nullable: false })
   isActive!: boolean;
 
-  @ManyToMany(() => Equipe, (equipe) => equipe.integrantes)
-  @JoinTable({
-    name: 'usuarios_equipes',
-    joinColumn: {
-      name: 'usuario_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'equipe_id',
-      referencedColumnName: 'id',
-    },
-  })
-  equipes!: Equipe[];
+  @ManyToOne(() => Equipe, (equipe) => equipe.integrantes, { onDelete: 'CASCADE' , nullable:true})
+  @JoinColumn({name: 'equipe_id'})
+  equipe!: Equipe;
 
   @OneToOne(() => Equipe, (equipe) => equipe.supervisor)
   equipe_supervisionada!: Equipe | null;

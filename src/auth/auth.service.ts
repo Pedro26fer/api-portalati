@@ -4,6 +4,7 @@ import { UserService } from 'src/user/user.service';
 import { LoginDTO } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { User } from 'src/user/user.entity';
+import { Equipe } from 'src/equipe/equipe.entity';
 
 export interface JWTPayload {
   userId: string;
@@ -64,8 +65,8 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       pNome: user.pNome,
-      entidade: user.entidade ? user.entidade.nome : null,
-      equipe: user.equipe ? user.equipe.nome : null,
+      entidade: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.entidade.nome) : null,
+      equipe: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.nome) : null,
     };
 
     return {
@@ -74,8 +75,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         pNome: user.pNome,
-        entidade: user.entidade ? user.entidade.nome : null,
-        equipe: user.equipe ? user.equipe.nome : null,
+        entidade: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.entidade.nome) : null,
+        equipe: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.nome) : null,
       },
     };
   }

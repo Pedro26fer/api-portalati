@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from 'src/user/user.module';
 import { JwtStrategy } from 'src/strategies/strategies.strategy';
+import { EquipeModule } from 'src/equipe/equipe.module';
+import { EntidadeModule } from 'src/entidade/entidade.module';
 
 
 /**
@@ -17,6 +19,8 @@ import { JwtStrategy } from 'src/strategies/strategies.strategy';
 @Module({
   imports: [
     UserModule, // Importa o módulo de técnicos
+    EquipeModule, // Importa o módulo de equipes
+    EntidadeModule,
     PassportModule, // Módulo do Passport para estratégias de autenticação
 
     // Configuração do JWT
