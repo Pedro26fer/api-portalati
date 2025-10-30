@@ -1,5 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDate, IsBoolean } from "class-validator";
-import { Entidade } from "src/entidade/entidade.entity";
+import { IsString, IsOptional, IsNumber, IsDate, IsBoolean, IsNotEmpty } from "class-validator";
 
 export class CreateUsinaDto {
 
@@ -10,7 +9,6 @@ export class CreateUsinaDto {
     skids: number
 
     @IsDate({message: 'O campo deve ser uma data'})
-    @IsDate({message: 'O campo deve ser um objeto tipo Date'})
     @IsOptional()
     data_aceite?: Date
 
@@ -22,13 +20,25 @@ export class CreateUsinaDto {
     @IsString({ message: 'O nome da entidade deve ser uma string' })
     entidade: string;
 
-    constructor(nome: string, skids: number, entidade: string, data_aceite?: Date, aceito?: boolean,){
+
+    @IsNotEmpty({message: 'Favor informar o responsável pela usina'})
+    @IsString({message: 'O nome do responsável pela usina deve ser uma string'})
+    responsavel: string
+
+    constructor(
+        nome: string,
+        skids: number,
+        entidade: string,
+        responsavel: string,
+        data_aceite?: Date,
+        aceito?: boolean,
+    ){
         this.nome  = nome
         this.skids = skids
         this.data_aceite = data_aceite
         this.aceito = aceito
         this.entidade = entidade
-    }
-
+        this.responsavel = responsavel
+    }   
 }
 

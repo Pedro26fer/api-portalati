@@ -1,5 +1,6 @@
 import { Entidade } from "src/entidade/entidade.entity";
 import { Equipe } from "src/equipe/equipe.entity";
+import { Responsavel } from "src/responsavel/reponsavel.entity";
 import { Column, PrimaryGeneratedColumn, Entity, CreateDateColumn, ManyToOne } from "typeorm";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,15 +31,19 @@ export class Usina{
     @ManyToOne(() => Entidade, entidade => entidade.usinas)
     entidade: Entidade;
 
+    @ManyToOne(() => Responsavel, resp => resp.usinas_supervisionadas, {nullable: true, onDelete: 'SET NULL'})
+    responsavel: Responsavel
 
-    constructor(nome: string, data_inicio: Date, data_aceite: Date, skids: number, entidade: Entidade){
+
+    constructor(nome: string, data_inicio: Date, data_aceite: Date, skids: number, entidade: Entidade, responsavel: Responsavel){
+        this.id = uuidv4()
         this.nome = nome
         this.skids = skids
         this.data_inicio = data_inicio
         this.data_aceite = data_aceite
         this.aceito = false
-        this.entidade = entidade
-        this.id = uuidv4()
+        this.entidade = entidade,
+        this.responsavel = responsavel
         
     }
 }
