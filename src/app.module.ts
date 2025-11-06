@@ -9,6 +9,8 @@ import { UsinaModule } from './usina/usina.module';
 import { EntidadeModule } from './entidade/entidade.module';
 import { EquipeModule } from './equipe/equipe.module';
 import { ResponsavelModule } from './responsavel/responsavel.module';
+import { EquipamentosModule } from './equipamentos/equipamentos.module';
+
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { ResponsavelModule } from './responsavel/responsavel.module';
     EntidadeModule,
     EquipeModule,
     ResponsavelModule,
+    EquipamentosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

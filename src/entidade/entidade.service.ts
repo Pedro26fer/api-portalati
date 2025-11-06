@@ -50,7 +50,7 @@ export class EntidadeService {
 
     async findAll(): Promise<Entidade[]>{
         this.logger.log('Listando todas as entidades')
-        return await this.entidadeRepository.find({relations: ['equipes']})
+        return await this.entidadeRepository.find({relations: ['equipes', 'equipes.sub_equipes', 'equipes.supervisor']})
     }
 
     async profile(id: string): Promise<Entidade>{

@@ -5,9 +5,10 @@ import { UsinaService } from './usina.service';
 import { UsinaController } from './usina.controller';
 import { Entidade } from 'src/entidade/entidade.entity';
 import { Responsavel } from 'src/responsavel/reponsavel.entity';
+import { Equipamentos } from 'src/equipamentos/equipamentos.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Usina, Entidade, Responsavel])],
+    imports: [TypeOrmModule.forFeature([Usina, Entidade, Responsavel, Equipamentos])],
     providers: [UsinaService],
     controllers: [UsinaController],
     exports: [UsinaService]
