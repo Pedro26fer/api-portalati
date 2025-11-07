@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Request, UseGuards } from "@nestjs/common";
+import { Controller, ForbiddenException, Req, Request, UseGuards } from "@nestjs/common";
 import {Post, Get, Param, Delete, Body, Patch} from "@nestjs/common";
 import { UserService } from "./user.service";
 import { CreateUsuarioDto } from "./dto/createUsuarioDto.dto";
@@ -22,8 +22,10 @@ export class UserController {
         return this.userService.getAllUsers();
     }
 
-    @Get('profile/:id')
-    async getUserById(@Param('id') id: string): Promise<User> {
+    @UseGuards(JwtAuthGuard)
+    @Get('profile')
+    async getUserById(@Request() req: any): Promise<User> {
+        const id = req.user.id;
         return this.userService.getUserById(id);
     }
 
