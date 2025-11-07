@@ -65,10 +65,11 @@ export class UserController {
         await this.userService.deleteUser(id);
     }
 
-    @Patch('update-personal-info/:id')
+    @Patch('update-personal-info')
     @UseGuards(JwtAuthGuard)
     @UseGuards(AuthGuard('jwt'))
-    async updatePersonalInfo(@Param('id') id: string, @Body() updateUserDto: UpdateUserDTO, @Request() req: any): Promise<User> {
+    async updatePersonalInfo(@Request() req: any, @Body() updateUserDto: UpdateUserDTO): Promise<User> {
+        const id = req.user.id;
         if(req.user.id !== id ){
             throw new ForbiddenException('Você não tem autorização para editar esse perfil')
         }
