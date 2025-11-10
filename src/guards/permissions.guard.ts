@@ -9,7 +9,7 @@ export class PermissionsGuard implements CanActivate {
             throw new UnauthorizedException('Usuário não autenticado');
         }
 
-        const entidade = user?.equipe?.entidade;
+        const entidade = user?.equipe?.entidade.nome;
         if (!entidade) {
             throw new UnauthorizedException('Usuário não possui entidade associada');
         }   

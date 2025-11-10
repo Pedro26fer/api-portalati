@@ -13,12 +13,13 @@ import { PermissionsGuard } from "src/guards/permissions.guard";
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     @Post('sign_up')
     async createUser(@Body() createUsuarioDto: CreateUsuarioDto): Promise<User>{
         return this.userService.createUser(createUsuarioDto);
     }
 
-    @UseGuards(JwtAuthGuard, AuthGuard('jwt'), PermissionsGuard)
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     @Get('all')
     async getAllUsers(): Promise<User[]> {
         return this.userService.getAllUsers();
