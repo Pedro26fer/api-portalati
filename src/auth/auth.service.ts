@@ -65,8 +65,8 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       pNome: user.pNome,
-      entidade: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.entidade.nome) : null,
-      equipe: user.equipes ? user.equipes.map((equipe: Equipe) => equipe.nome) : null,
+      entidade: user.equipe ? user.equipe.entidade.nome : null,
+      equipe: user.equipe ? user.equipe.nome : null,
     };
 
     return {

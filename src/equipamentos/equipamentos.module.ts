@@ -5,9 +5,10 @@ import { Equipamentos } from './equipamentos.entity';
 import { Usina } from 'src/usina/usina.entity';
 import { EquipamentosController } from './equipamentos.controller';
 import { EquipamentoService } from './equipamentos.service';
+import { Agenda } from 'src/agenda/agenda.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Equipamentos, Usina])],
+    imports: [TypeOrmModule.forFeature([Equipamentos, Usina, Agenda])],
     controllers: [EquipamentosController],
     providers: [EquipamentoService],
     exports: [EquipamentoService],

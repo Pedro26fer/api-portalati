@@ -10,6 +10,7 @@ import { EntidadeModule } from './entidade/entidade.module';
 import { EquipeModule } from './equipe/equipe.module';
 import { ResponsavelModule } from './responsavel/responsavel.module';
 import { EquipamentosModule } from './equipamentos/equipamentos.module';
+import { AgendaModule } from './agenda/agenda.module';
 
 
 @Module({
@@ -40,6 +41,7 @@ import { EquipamentosModule } from './equipamentos/equipamentos.module';
     EquipeModule,
     ResponsavelModule,
     EquipamentosModule,
+    AgendaModule
   ],
   controllers: [AppController],
   providers: [AppService],

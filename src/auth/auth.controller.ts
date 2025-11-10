@@ -31,7 +31,9 @@ export class AuthController{
             user: {
                 id: req.user.id,
                 email: req.user.email,
-                pNome: req.user.pNome
+                pNome: req.user.pNome,
+                entidade: req.user.entidade,
+                equipe: req.user.equipe,
             }
         }
     }

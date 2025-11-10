@@ -9,9 +9,11 @@ import {
   OneToOne,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import {Exclude} from 'class-transformer';
+import { Agenda } from 'src/agenda/agenda.entity';
 @Entity('usuario')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -42,11 +44,14 @@ export class User {
   @Column({ nullable: false })
   isActive!: boolean;
 
+  @OneToMany(() => Agenda, (agenda) => agenda.tecnico)
+  agenda!: Agenda[];
+
   @ManyToOne(() => Equipe, (equipe) => equipe.integrantes, { onDelete: 'CASCADE' , nullable:true})
   @JoinColumn({name: 'equipe_id'})
   equipe!: Equipe;
 
-  @OneToOne(() => Equipe, (equipe) => equipe.supervisor)
+  @OneToOne(() => Equipe, (equipe) => equipe.supervisor, {nullable: true})
   equipe_supervisionada!: Equipe | null;
 
   constructor() {

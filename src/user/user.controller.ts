@@ -6,6 +6,7 @@ import { UpdateUserDTO } from "./dto/updateUsuarioDto.dto";
 import { User } from "./user.entity";
 import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
 import { AuthGuard } from "@nestjs/passport";
+import { PermissionsGuard } from "src/guards/permissions.guard";
 
 
 @Controller('user')
@@ -17,6 +18,7 @@ export class UserController {
         return this.userService.createUser(createUsuarioDto);
     }
 
+    @UseGuards(JwtAuthGuard, AuthGuard('jwt'), PermissionsGuard)
     @Get('all')
     async getAllUsers(): Promise<User[]> {
         return this.userService.getAllUsers();
@@ -35,8 +37,7 @@ export class UserController {
     }
 
     @Patch('inactivate/:id')
-    @UseGuards(JwtAuthGuard)
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(JwtAuthGuard, AuthGuard('jwt'), PermissionsGuard)
     async inactivateUser(@Param('id') id: string, @Request() req: any): Promise<void> {
         if(req.user.id !== id){
             throw new ForbiddenException('Você não tem autorização para editar esse perfil')
@@ -53,14 +54,14 @@ export class UserController {
     }
 
     @Patch('activate/:id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     async activateUser(@Param('id') id: string) : Promise<void>{
         await this.userService.activateUser(id);
     }
     
 
     @Delete('delete/:id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     async deleteUser(@Param('id') id: string): Promise<void> {
         await this.userService.deleteUser(id);
     }

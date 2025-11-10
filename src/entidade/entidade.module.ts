@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntidadeController } from './entidade.controller';
 import { UsinaModule } from 'src/usina/usina.module';
 import { Usina } from 'src/usina/usina.entity';
+import { Agenda } from 'src/agenda/agenda.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Entidade])],
+    imports: [TypeOrmModule.forFeature([Entidade, Agenda])],
     providers: [EntidadeService],
     controllers: [EntidadeController],
     exports: [EntidadeService]
