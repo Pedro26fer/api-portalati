@@ -21,6 +21,9 @@ export class Agenda{
     @ManyToOne(() => User, user => user.agenda)
     tecnico: User;
 
+    @Column({type: 'varchar', nullable: true})
+    tecnicoCampo: string;
+
     @Column({type: 'varchar', nullable: false})
     cliente: string;
 
@@ -43,12 +46,13 @@ export class Agenda{
     updated_at!: Date;
 
 
-    constructor(start: Date, end: Date, tag: string, tecnico: User, cliente: string, usina: string, status: string, equipamento: string){
+    constructor(start: Date, end: Date, tag: string, tecnico: User, tecnicoCampo: string, cliente: string, usina: string, status: string, equipamento: string){
         this.id = uuidv4();
         this.start = start;
         this.end = end;
         this.tag = tag;
         this.tecnico = tecnico;
+        this.tecnicoCampo = tecnicoCampo;
         this.cliente = cliente;
         this.usina = usina;
         this.status = status;

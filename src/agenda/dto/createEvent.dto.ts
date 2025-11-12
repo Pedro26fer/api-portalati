@@ -15,6 +15,9 @@ export class CreateEventDto {
     @IsEmail({}, {message: 'O email do técnico deve ser um email válido'})
     tecnicoEmail!: string;
 
+    @IsString({message: "O nome do técnico de campo deve ser uma string"})
+    tecnicoCampo!: string;
+
     @IsString({message: 'O cliente deve ser uma string'})
     cliente!: string;
 

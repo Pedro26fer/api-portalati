@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   Inject,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -112,80 +114,101 @@ export class EquipeService {
   }
 
   async updateEquipe(
-    id: string,
-    updateEquipeDto: UpdateEquipeDto,
-  ): Promise<Equipe> {
-    const equipe = await this.findById(id);
+  id: string,
+  updateEquipeDto: UpdateEquipeDto,
+): Promise<Equipe> {
+  const equipe = await this.findById(id);
 
-    if (!equipe) {
-      throw new NotFoundException('Equipe não encontrada');
-    }
-
-    if (updateEquipeDto.nome) {
-      const equipeWithSameName = await this.equipeRepository.findOneOrFail({
-        where: { nome: updateEquipeDto.nome },
-      });
-      if (equipeWithSameName.id !== id) {
-        throw new ForbiddenException('Já existe uma equipe com esse nome');
-      } else if (equipeWithSameName.id === id) {
-        throw new ForbiddenException('Esse é o nome atual da equipe');
-      } else {
-        equipe.nome = updateEquipeDto.nome;
-      }
-
-      if (updateEquipeDto.nivel) {
-        equipe.nivel = updateEquipeDto.nivel;
-      }
-
-      if (updateEquipeDto.supervisor) {
-        const supervisor = await this.userRepository.findOne({
-          where: { pNome: updateEquipeDto.supervisor },
-        });
-
-        if (!supervisor) {
-          throw new NotFoundException('Supervisor não encontrado');
-        } else if (
-          supervisor.id === equipe.supervisor.id &&
-          equipe.supervisor !== null
-        ) {
-          throw new ForbiddenException('Esse é o supervisor atual da equipe');
-        } else if (supervisor.equipe_supervisionada) {
-          throw new ForbiddenException(
-            'Esse supervisor já está supervisionando outra equipe',
-          );
-        }
-        equipe.supervisor = supervisor;
-      }
-
-      if (updateEquipeDto.entidade) {
-        const entidade = await this.entidadeRepository.findOne({
-          where: { nome: updateEquipeDto.entidade },
-        });
-
-        if (!entidade) {
-          throw new NotFoundException('Entidade não encontrada');
-        }
-        equipe.entidade = entidade;
-      }
-    }
-
-    if( updateEquipeDto.parent_equipe ) {
-      const parentEquipe = await this.equipeRepository.findOne({
-        where: { nome: updateEquipeDto.parent_equipe },
-      });
-      if (!parentEquipe) {
-        throw new NotFoundException('Equipe pai não encontrada');
-      }
-      equipe.parent_equipe = parentEquipe;
-      if (parentEquipe.supervisor == equipe.supervisor) {
-        throw new ForbiddenException(
-          'O supervisor não pode ser o mesmo da equipe pai',
-        );
-      }
-    }
-    const novaEquipe = await this.equipeRepository.save(equipe);
-    return plainToInstance(Equipe, novaEquipe, { excludeExtraneousValues: true });
+  if (!equipe) {
+    throw new NotFoundException('Equipe não encontrada');
   }
+
+  // Atualiza o nome, se enviado
+  if (updateEquipeDto.nome) {
+    const novoNome = updateEquipeDto.nome.trim();
+
+    const equipeWithSameName = await this.equipeRepository.findOne({
+      where: { nome: novoNome },
+    });
+
+    if (equipeWithSameName && equipeWithSameName.id !== id) {
+      throw new ConflictException('Já existe uma equipe com esse nome');
+    }
+
+    // Só altera se for diferente do atual
+    if (novoNome !== equipe.nome) {
+      equipe.nome = novoNome;
+    }
+  }
+
+  // Atualiza o nível, se enviado
+  if (updateEquipeDto.nivel) {
+    equipe.nivel = updateEquipeDto.nivel;
+  }
+
+  // Atualiza o supervisor, se enviado
+  if (updateEquipeDto.supervisor) {
+    const supervisor = await this.userRepository.findOne({
+      where: { pNome: updateEquipeDto.supervisor },
+    });
+
+    if (!supervisor) {
+      throw new NotFoundException('Supervisor não encontrado');
+    }
+
+    if (
+      equipe.supervisor &&
+      supervisor.id === equipe.supervisor.id
+    ) {
+      throw new BadRequestException('Esse é o supervisor atual da equipe');
+    }
+
+    if (supervisor.equipe_supervisionada) {
+      throw new ConflictException(
+        'Esse supervisor já está supervisionando outra equipe',
+      );
+    }
+
+    equipe.supervisor = supervisor;
+  }
+
+  // Atualiza a entidade, se enviada
+  if (updateEquipeDto.entidade) {
+    const entidade = await this.entidadeRepository.findOne({
+      where: { nome: updateEquipeDto.entidade },
+    });
+
+    if (!entidade) {
+      throw new NotFoundException('Entidade não encontrada');
+    }
+
+    equipe.entidade = entidade;
+  }
+
+  // Atualiza a equipe pai, se enviada
+  if (updateEquipeDto.parent_equipe) {
+    const parentEquipe = await this.equipeRepository.findOne({
+      where: { nome: updateEquipeDto.parent_equipe },
+    });
+
+    if (!parentEquipe) {
+      throw new NotFoundException('Equipe pai não encontrada');
+    }
+
+    if (parentEquipe.supervisor?.id === equipe.supervisor?.id) {
+      throw new ConflictException(
+        'O supervisor não pode ser o mesmo da equipe pai',
+      );
+    }
+
+    equipe.parent_equipe = parentEquipe;
+  }
+
+  // Salva e retorna a nova equipe
+  const novaEquipe = await this.equipeRepository.save(equipe);
+
+  return plainToInstance(Equipe, novaEquipe, { excludeExtraneousValues: true });
+}
 
   async removeEquipe(id: string): Promise<void> {
     const equipeToRemove = await this.findById(id);
