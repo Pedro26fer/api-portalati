@@ -1,4 +1,4 @@
-import { Inject, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, NotFoundException } from '@nestjs/common';
 import {
   Injectable,
   NotAcceptableException,
@@ -29,94 +29,160 @@ export class AgendaService {
     private readonly entidadeRepository: Repository<Entidade>,
   ) {}
 
-  async createEvent(createEventDto: CreateEventDto): Promise<Agenda> {
-    const {
-      start,
-      end,
-      tag,
-      tecnicoEmail,
-      cliente,
-      usina,
-      status,
-      equipamento,
-    } = createEventDto;
-    const tecnicoUser = await this.userRepository.findOne({
-      where: { email: tecnicoEmail },
-    });
-    if (!tecnicoUser) {
-      throw new NotAcceptableException('Técnico não encontrado');
-    }
+  private async checkConflito(
+    tecnicoId: string,
+    tecnicoCampo: string,
+    eventId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<void> {
+    const horaInicio = startDate.getHours();
+    const horaFim = endDate.getHours();
 
-    const startDate = new Date(start);
-    const endDate = new Date(end);
 
-    const horárioOcupado = await this.agendaRepository.findOne({
-      where: { start: In([startDate, endDate]), tecnico: tecnicoUser },
-    });
-    if (horárioOcupado) {
-      throw new ForbiddenException(
-        'O técnico já possui um compromisso nesse horário',
+    // Bloqueia fora do horário comercial (8h às 17h)
+    if ( horaInicio < 8 || horaInicio > 17 || horaFim > 17 || horaFim < 8) {
+      throw new BadRequestException(
+        'O teste só pode ser marcado entre 08:00 e 17:00.',
       );
     }
 
+    const dataAtual = new Date();
+    if (startDate < dataAtual) {
+      throw new BadRequestException(
+        'O teste não pode começar antes da data atual',
+      );
+    }
+    const conflito = await this.agendaRepository
+      .createQueryBuilder('agenda')
+      .where('agenda.id != :eventId', { eventId })
+      .andWhere('agenda.tecnicoId = :tecnicoId', { tecnicoId })
+      .andWhere('agenda.tecnicoCampo = :tecnicoCampo', { tecnicoCampo })
+      .andWhere('(agenda.start < :end OR agenda.end > :start)', {
+        start: startDate,
+        end: endDate,
+      })
+      .getOne();
+
+    if (conflito) {
+      throw new ForbiddenException(
+        'O técnico já possui um compromisso nesse horário.',
+      );
+    }
+  }
+
+  private async checaDiasUteis(startDate: Date, endDate: Date): Promise<void> {
     const horarioComercial =
       startDate.getHours() >= 8 && endDate.getHours() <= 17;
     if (!horarioComercial) {
       throw new NotAcceptableException(
-        'Compromissos só podem ser agendados em horário comercial válido (08:00 - 17:00)',
+        'Compromissos só podem ser agendados entre 08:00 e 17:00.',
       );
     }
 
     const diaUtil = startDate.getDay() !== 0 && startDate.getDay() !== 6;
     if (!diaUtil) {
       throw new NotAcceptableException(
-        'Compromissos só podem ser agendados em dias úteis (segunda a sexta-feira)',
+        'Compromissos só podem ser agendados em dias úteis (segunda a sexta).',
       );
     }
+  }
 
-    // const clienteUsina = await this.entidadeRepository.findOne({where: {nome: cliente}});
-    // if(!clienteUsina){
-    //     throw new NotAcceptableException('Cliente não encontrado');
-    // }
-
-    // const usinaEntity = await this.usinaRepository.findOne({where: {nome: usina, entidade: clienteUsina}});
-    // if(!usinaEntity){
-    //     throw new NotAcceptableException('Usina não encontrada para o cliente informado');
-    // }
-
-    // const equipamentoEntity = await this.equipamentoRepository.findOne({where: {nome: equipamento, usina: usinaEntity}});
-    // if(!equipamentoEntity){
-    //     throw new NotAcceptableException('Equipamento não encontrado para a usina informada');
-    // }
-
-    const newEvent = {
-      start: startDate,
-      end: endDate,
+  async createEvent(createEventDto: CreateEventDto): Promise<Agenda> {
+    const {
+      start,
+      end,
       tag,
-      tecnico: tecnicoUser,
+      tecnicoEmail,
+      tecnicoCampo,
       cliente,
       usina,
       status,
       equipamento,
-    };
+    } = createEventDto;
 
-    const createdEvent = this.agendaRepository.create(newEvent);
-    return await this.agendaRepository.save(createdEvent);
+    const tecnicoUser = await this.userRepository.findOne({
+      where: { email: tecnicoEmail },
+    });
+
+    if (!tecnicoUser) {
+      throw new NotAcceptableException('Técnico não encontrado');
+    }
+
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const now = new Date();
+
+    if (startDate < now || endDate < now) {
+      throw new NotAcceptableException('Datas inválidas');
+    }
+
+    // 🔒 Verifica conflito de horários
+    const conflito = await this.agendaRepository
+      .createQueryBuilder('agenda')
+      .where('agenda.tecnicoId = :tecnicoId', { tecnicoId: tecnicoUser.id })
+      .andWhere('agenda.tecnicoCampo = :tecnicoCampo', { tecnicoCampo })
+      .andWhere('(agenda.start < :end AND agenda.end > :start)', {
+        start: startDate,
+        end: endDate,
+      })
+      .getOne();
+
+    if (conflito) {
+      throw new ForbiddenException(
+        'O técnico já possui um compromisso nesse horário.',
+      );
+    }
+
+    await this.checaDiasUteis(startDate, endDate);
+
+    const newEvent = this.agendaRepository.create({
+      start: startDate,
+      end: endDate,
+      tag,
+      tecnico: tecnicoUser,
+      tecnicoCampo,
+      cliente,
+      usina,
+      status,
+      equipamento,
+    });
+
+    return await this.agendaRepository.save(newEvent);
   }
 
   async getAllEvents(): Promise<Agenda[]> {
     return await this.agendaRepository.find({ relations: ['tecnico'] });
   }
 
-  async findEventById(id: string): Promise<Agenda[]> {
+  async getEventesByTecnicoCampo(
+    tecnicoCampo: string,
+    entidade: string,
+  ): Promise<Agenda[]> {
+    const entidadeDoUsuário = entidade;
+    const events =
+      entidadeDoUsuário == 'ATI'
+        ? await this.agendaRepository.find({
+            where: { tecnicoCampo },
+            relations: ['tecnico'],
+          })
+        : await this.agendaRepository.find({
+            where: { tecnicoCampo, cliente: entidadeDoUsuário },
+            relations: ['tecnico'],
+          });
 
-    const user = await this.userRepository.findOne({where: {id}});
-    if(!user){
+    return events;
+  }
+
+  async findEventsByUserId(id: string): Promise<Agenda[]> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
       throw new NotAcceptableException('Usuário não encontrado');
     }
 
     const usersEvent = await this.agendaRepository.find({
       where: { tecnico: { id: user.id } },
+      relations: ['tecnico'],
     });
 
     if (!usersEvent) {
@@ -135,10 +201,74 @@ export class AgendaService {
     //   throw new NotFoundException('Entidade não encontrada');
     // }
 
-    const entidadeAgenda =  await this.agendaRepository.find({
+    const entidadeAgenda = await this.agendaRepository.find({
       where: { cliente: entidadeNome },
     });
 
     return entidadeAgenda;
+  }
+
+  async deleteEvent(eventId: string): Promise<void> {
+    const event = await this.agendaRepository.findOne({
+      where: { id: eventId },
+    });
+    if (!event) {
+      throw new NotFoundException('Evento não encontrado');
+    }
+
+    await this.agendaRepository.remove(event);
+  }
+
+  async updateEvent(
+    user: User,
+    eventId: string,
+    updateEventoDto: UpdateEventDto,
+  ): Promise<Agenda> {
+    // Buscar evento do usuário logado
+    const eventosDoUsuario = await this.findEventsByUserId(user.id);
+    const eventoToUpdate = eventosDoUsuario.find((e) => e.id === eventId);
+
+    if (!eventoToUpdate) {
+      throw new NotFoundException('Evento não encontrado para esse usuário');
+    }
+
+    // Datas atualizadas
+    const startDate = updateEventoDto.start
+      ? new Date(updateEventoDto.start)
+      : new Date(eventoToUpdate.start);
+    const endDate = updateEventoDto.end
+      ? new Date(updateEventoDto.end)
+      : new Date(eventoToUpdate.end);
+
+    if (startDate >= endDate) {
+      throw new BadRequestException(
+        'A data de início deve ser anterior à data de término',
+      );
+    }
+
+    await this.checaDiasUteis(startDate, endDate);
+
+    const tecnicoATI = await this.userRepository.findOne({
+      where: { email: updateEventoDto.tecnicoEmail },
+    });
+    const { tecnicoCampo } = updateEventoDto;
+
+    if (!tecnicoATI) {
+      throw new NotFoundException('Tecnico ATI não encontrado');
+    }
+    const tecnicoCampoParaChecar = tecnicoCampo ?? eventoToUpdate.tecnicoCampo;
+
+    await this.checkConflito(
+      tecnicoATI.id,
+      tecnicoCampoParaChecar,
+      eventId,
+      startDate,
+      endDate,
+    );
+
+    Object.assign(eventoToUpdate, updateEventoDto);
+    if (tecnicoCampo) eventoToUpdate.tecnicoCampo = tecnicoCampo;
+
+    return await this.agendaRepository.save(eventoToUpdate);
   }
 }
