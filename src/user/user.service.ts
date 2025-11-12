@@ -151,6 +151,7 @@ export class UserService {
         }
         user.equipe = equipe;
     }
+
     return await this.userRepository.save({...user,...updatePersonalInfo, equipe: user.equipe});
   }
 

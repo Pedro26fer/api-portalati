@@ -10,6 +10,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  UpdateDateColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import {Exclude} from 'class-transformer';

@@ -41,7 +41,7 @@ export class EquipeService {
     newEquipe.entidade = entidadeReal;
 
     const supervisorName = await this.userRepository.findOne({
-      where: { pNome: supervisor },
+      where: { email: supervisor },
     });
 
     if (!supervisorName) {
@@ -122,15 +122,17 @@ export class EquipeService {
     }
 
     if (updateEquipeDto.nome) {
-      const equipeWithSameName = await this.equipeRepository.findOneOrFail({
+      const equipeWithSameName = await this.equipeRepository.findOne({
         where: { nome: updateEquipeDto.nome },
       });
-      if (equipeWithSameName.id !== id) {
-        throw new ForbiddenException('Já existe uma equipe com esse nome');
-      } else if (equipeWithSameName.id === id) {
-        throw new ForbiddenException('Esse é o nome atual da equipe');
-      } else {
-        equipe.nome = updateEquipeDto.nome;
+      if(equipeWithSameName) {
+        if (equipeWithSameName.id !== id) {
+          throw new ForbiddenException('Já existe uma equipe com esse nome');
+        } else if (equipeWithSameName.id === id) {
+          throw new ForbiddenException('Esse é o nome atual da equipe');
+        } else {
+          equipe.nome = updateEquipeDto.nome;
+        }
       }
 
       if (updateEquipeDto.nivel) {
