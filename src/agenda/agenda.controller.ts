@@ -12,7 +12,7 @@ import { CreateEventDto } from './dto/createEvent.dto';
 import { UpdateEventDto } from './dto/updateEvent.dto';
 import { Agenda } from './agenda.entity';
 import { Body, Post, Put, Get, Param } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 

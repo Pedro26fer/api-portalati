@@ -89,67 +89,70 @@ export class AgendaService {
   }
 
   async createEvent(createEventDto: CreateEventDto): Promise<Agenda> {
-    const {
-      start,
-      end,
-      tag,
-      tecnicoEmail,
+  const {
+    start,
+    end,
+    tag,
+    tecnicoEmail,
+    tecnicoCampo,
+    cliente,
+    usina,
+    status,
+    equipamento,
+  } = createEventDto;
+
+  const tecnicoUser = await this.userRepository.findOne({
+    where: { email: tecnicoEmail },
+  });
+
+  if (!tecnicoUser) {
+    throw new NotAcceptableException('Técnico não encontrado');
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const now = new Date();
+
+  if (startDate < now || endDate < now) {
+    throw new NotAcceptableException('Datas inválidas');
+  }
+
+  // 🔒 Verifica conflitos de horário para técnico principal OU técnico de campo
+  const conflito = await this.agendaRepository
+    .createQueryBuilder('agenda')
+    .where('(agenda.tecnicoId = :tecnicoId OR agenda.tecnicoCampo = :tecnicoCampo)', {
+      tecnicoId: tecnicoUser.id,
       tecnicoCampo,
-      cliente,
-      usina,
-      status,
-      equipamento,
-    } = createEventDto;
-
-    const tecnicoUser = await this.userRepository.findOne({
-      where: { email: tecnicoEmail },
-    });
-
-    if (!tecnicoUser) {
-      throw new NotAcceptableException('Técnico não encontrado');
-    }
-
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const now = new Date();
-
-    if (startDate < now || endDate < now) {
-      throw new NotAcceptableException('Datas inválidas');
-    }
-
-    // 🔒 Verifica conflito de horários
-    const conflito = await this.agendaRepository
-      .createQueryBuilder('agenda')
-      .where('agenda.tecnicoId = :tecnicoId', { tecnicoId: tecnicoUser.id })
-      .andWhere('agenda.tecnicoCampo = :tecnicoCampo', { tecnicoCampo })
-      .andWhere('(agenda.start < :end AND agenda.end > :start)', {
-        start: startDate,
-        end: endDate,
-      })
-      .getOne();
-
-    if (conflito) {
-      throw new ForbiddenException(
-        'O técnico já possui um compromisso nesse horário.',
-      );
-    }
-
-    await this.checaDiasUteis(startDate, endDate);
-
-    const newEvent = this.agendaRepository.create({
+    })
+    .andWhere('(agenda.start < :end AND agenda.end > :start)', {
       start: startDate,
       end: endDate,
-      tag,
-      tecnico: tecnicoUser,
-      tecnicoCampo,
-      cliente,
-      usina,
-      status,
-      equipamento,
-    });
+    })
+    .getOne();
 
-    return await this.agendaRepository.save(newEvent);
+  if (conflito) {
+    throw new ForbiddenException(
+      'Já existe um compromisso nesse horário para o técnico ou técnico de campo.',
+    );
   }
+
+  await this.checaDiasUteis(startDate, endDate);
+
+  const newEvent = this.agendaRepository.create({
+    start: startDate,
+    end: endDate,
+    tag,
+    tecnico: tecnicoUser,
+    tecnicoCampo,
+    cliente,
+    usina,
+    status,
+    equipamento,
+  });
+
+  return await this.agendaRepository.save(newEvent);
+}
+
 
   async getAllEvents(): Promise<Agenda[]> {
     return await this.agendaRepository.find({ relations: ['tecnico'] });

@@ -10,7 +10,7 @@ import { UserService } from './user.service';
 import { CreateUsuarioDto } from './dto/createUsuarioDto.dto';
 import { UpdateUserDTO } from './dto/updateUsuarioDto.dto';
 import { User } from './user.entity';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 

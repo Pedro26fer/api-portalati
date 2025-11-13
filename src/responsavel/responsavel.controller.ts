@@ -11,7 +11,7 @@ import { Post } from '@nestjs/common';
 import { CreateResponsavelDto } from './dto/create_responsavel.dto';
 import { Responsavel } from './reponsavel.entity';
 import { ResponsavelService } from './responsavel.service';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { UpdateResponsavelDto } from './dto/update_responsavel.dto';
 
 @Controller('responsavel')

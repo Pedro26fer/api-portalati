@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { EquipamentoService } from './equipamentos.service';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { Equipamentos } from './equipamentos.entity';
 import { CreateEquipamentoDto } from './dto/createEquipamento.dto';
 

@@ -2,7 +2,7 @@ import { Controller, Body, Param } from '@nestjs/common';
 import { Post, Get, Patch, Delete } from '@nestjs/common';
 import { CreateUsinaDto } from './dto/create-usina.dto';
 import { UpdateUsinaDto } from './dto/update-usina.dto';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
 import { Usina } from './usina.entity';
 import { UsinaService } from './usina.service';
