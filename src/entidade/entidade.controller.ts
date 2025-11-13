@@ -13,7 +13,7 @@ import { CreateEntidadeDto } from './dto/createEntidade.dto';
 import { UpdateEntidadeDto } from './dto/updateEntidade.dto';
 import { Entidade } from './entidade.entity';
 import { Usina } from 'src/usina/usina.entity';
-import { JwtAuthGuard } from 'src/entidade/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 
 @Controller('entidade')
 export class EntidadeController {
