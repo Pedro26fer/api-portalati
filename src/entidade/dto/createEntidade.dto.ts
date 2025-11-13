@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNotEmpty, IsUrl } from "class-validator";
+import { IsOptional, IsString, IsNotEmpty, IsUrl, IsBoolean } from "class-validator";
 
 export class CreateEntidadeDto {
     
@@ -13,6 +13,10 @@ export class CreateEntidadeDto {
     @IsNotEmpty()
     @IsUrl({}, {message: 'O link não é válido'})
     link!: string   
+
+    @IsBoolean()
+    @IsOptional()
+    ativo!: boolean
 
     
 }
