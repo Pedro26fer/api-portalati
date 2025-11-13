@@ -11,6 +11,7 @@ import { EquipeModule } from './equipe/equipe.module';
 import { ResponsavelModule } from './responsavel/responsavel.module';
 import { EquipamentosModule } from './equipamentos/equipamentos.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { PermissionsModule } from './guards/permissions.module';
 
 
 @Module({
@@ -41,7 +42,8 @@ import { AgendaModule } from './agenda/agenda.module';
     EquipeModule,
     ResponsavelModule,
     EquipamentosModule,
-    AgendaModule
+    AgendaModule,
+    PermissionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

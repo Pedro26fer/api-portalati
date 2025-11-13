@@ -54,7 +54,9 @@ export class EntidadeService {
       throw new ForbiddenException('Já existe uma entidade com esse link');
     }
 
-    const newEntidade = this.entidadeRepository.create(createEntidadeDto);
+    const newDataDto = {...createEntidadeDto, nome: nome.toUpperCase()}
+
+    const newEntidade = this.entidadeRepository.create(newDataDto);
     this.logger.log('Entidade salva com sucesso');
 
     return await this.entidadeRepository.save(newEntidade);

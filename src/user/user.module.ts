@@ -6,9 +6,10 @@ import { UserController } from './user.controller';
 import { Equipe } from 'src/equipe/equipe.entity';
 import { Responsavel } from 'src/responsavel/reponsavel.entity';
 import { Agenda } from 'src/agenda/agenda.entity';
+import { Entidade } from 'src/entidade/entidade.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Equipe, Agenda])],
+  imports: [TypeOrmModule.forFeature([User, Equipe, Agenda, Entidade])],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],
