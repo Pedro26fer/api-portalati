@@ -30,6 +30,12 @@ export class UserController {
     return this.userService.getAllUsers();
   }
 
+  @Get('usuarios_ati')
+  @UseGuards(JwtAuthGuard)
+  async getUsersAti() : Promise<User[]>{
+    return this.userService.getUserAti()
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getUserById(@Request() req: any): Promise<User> {
