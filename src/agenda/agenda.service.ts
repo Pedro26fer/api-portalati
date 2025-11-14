@@ -158,6 +158,18 @@ export class AgendaService {
     return await this.agendaRepository.find({ relations: ['tecnico'] });
   }
 
+  async getEventById(id: string){
+    const event = await this.agendaRepository.findOne({where:{
+      id
+    }})
+
+    if(!event){
+      throw new NotFoundException('Agendamento não encontrado')
+    }
+
+    return event
+  }
+
   async getEventesByTecnicoCampo(
     tecnicoCampo: string,
     entidade: string,

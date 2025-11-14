@@ -41,6 +41,12 @@ export class AgendaController {
     return myEvents;
   }
 
+  @Get('agendamento/:id')
+  @UseGuards(JwtAuthGuard)
+  async getEventById(@Param('id') id: string) : Promise<Agenda>{
+    return this.agendaService.getEventById(id)
+  }
+
   @Get('tecnico_campo')
   @UseGuards(JwtAuthGuard, AuthGuard('jwt'))
   async getByTecnicoCampo(

@@ -90,6 +90,7 @@ export class EquipeService {
       relations: ['entidade', 'supervisor', 'integrantes', 'parent_equipe', 'sub_equipes.integrantes',],
     });
   }
+  
 
   async findById(id: string): Promise<Equipe> {
     const equipe = await this.equipeRepository.findOne({
