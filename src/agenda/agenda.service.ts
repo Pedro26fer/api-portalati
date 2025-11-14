@@ -159,9 +159,13 @@ export class AgendaService {
   }
 
   async getEventById(id: string){
-    const event = await this.agendaRepository.findOne({where:{
+    const event = await this.agendaRepository.findOne({
+      where:{
       id
-    }})
+    }, 
+    relations: ['user']
+  
+  })
 
     if(!event){
       throw new NotFoundException('Agendamento não encontrado')
