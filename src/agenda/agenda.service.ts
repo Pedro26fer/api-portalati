@@ -163,7 +163,7 @@ export class AgendaService {
       where:{
       id
     }, 
-    relations: ['user']
+    relations: ['tecnico']
   
   })
 
