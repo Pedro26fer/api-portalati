@@ -244,8 +244,9 @@ export class AgendaService {
     updateEventoDto: UpdateEventDto,
   ): Promise<Agenda> {
     // Buscar evento do usuário logado
-    const eventosDoUsuario = await this.findEventsByUserId(user.id);
-    const eventoToUpdate = eventosDoUsuario.find((e) => e.id === eventId);
+//     const eventosDoUsuario = await this.findEventsByUserId(user.id);
+//     const eventoToUpdate = eventosDoUsuario.find((e) => e.id === eventId);
+    const eventoToUpdate = await this.getEventById(eventId);
 
     if (!eventoToUpdate) {
       throw new NotFoundException('Evento não encontrado para esse usuário');
