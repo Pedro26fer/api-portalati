@@ -21,9 +21,10 @@ export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)
-  async createEvent(@Body() createEventDto: CreateEventDto): Promise<Agenda> {
-    return await this.agendaService.createEvent(createEventDto);
+  @UseGuards(JwtAuthGuard, AuthGuard('jwt'))
+  async createEvent(@Request() req: any, @Body() createEventDto: CreateEventDto): Promise<Agenda> {
+    const userLogado = req.user
+    return await this.agendaService.createEvent(userLogado, createEventDto);
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -39,6 +40,13 @@ export class AgendaController {
     const userId = req.user.id;
     const myEvents = await this.agendaService.findEventsByUserId(userId);
     return myEvents;
+  }
+
+  @Get('meus_agendamentos')
+  @UseGuards(JwtAuthGuard)
+  async meus_agendamentos(@Request() req: any): Promise<Agenda[]>{
+    const userId = req.user.id 
+    return this.agendaService.getEventByResponsavelPelaAbertura(userId)
   }
 
   @Get('agendamento/:id')
