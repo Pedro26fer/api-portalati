@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   NotAcceptableException,
   ConflictException,
+  Query
 } from '@nestjs/common';
 import {
   Post,
@@ -19,6 +20,7 @@ import { CreateEquipeDto } from './dto/create-equipe.dto';
 import { UpdateEquipeDto } from './dto/update-equipe.dto';
 import { Equipe } from './equipe.entity';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { User } from 'src/user/user.entity';
 
 @Controller('equipe')
 export class EquipeController {
@@ -35,6 +37,12 @@ export class EquipeController {
   @Get('all')
   async getAllEquipes(): Promise<Equipe[]> {
     return await this.equipeService.findAll();
+  }
+
+  @Get('integrantes')
+  @UseGuards(JwtAuthGuard)
+  async integrantesList(@Query('nome') nome: string): Promise<User[]>{
+    return this.equipeService.findIntegrantes(nome);
   }
 
   @Get('/info/:id')
