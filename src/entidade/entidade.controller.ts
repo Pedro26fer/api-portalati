@@ -13,6 +13,7 @@ import { CreateEntidadeDto } from './dto/createEntidade.dto';
 import { UpdateEntidadeDto } from './dto/updateEntidade.dto';
 import { Entidade } from './entidade.entity';
 import { Usina } from 'src/usina/usina.entity';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 
 @Controller('entidade')
@@ -28,6 +29,7 @@ export class EntidadeController {
   }
 
   @Get('all')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   async findAll(): Promise<Entidade[]> {
     return await this.entidadeService.findAll();
   }

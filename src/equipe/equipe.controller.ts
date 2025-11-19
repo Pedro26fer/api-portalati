@@ -18,6 +18,7 @@ import { EquipeService } from './equipe.service';
 import { CreateEquipeDto } from './dto/create-equipe.dto';
 import { UpdateEquipeDto } from './dto/update-equipe.dto';
 import { Equipe } from './equipe.entity';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 
 @Controller('equipe')
@@ -33,6 +34,7 @@ export class EquipeController {
   }
 
   @Get('all')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   async getAllEquipes(): Promise<Equipe[]> {
     return await this.equipeService.findAll();
   }

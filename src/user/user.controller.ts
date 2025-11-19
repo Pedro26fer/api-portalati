@@ -38,10 +38,17 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getUserById(@Request() req: any): Promise<User> {
+  async getMyUser(@Request() req: any): Promise<User> {
     const id = req.user.id;
     return this.userService.getUserById(id);
   }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Get('profileById/:id')
+  async getUserById(@Param("id") id: string ): Promise<User> {
+    return this.userService.getUserById(id);
+  }
+
 
   @Get('search_for_email')
   async findByEmail(@Body('email') email: string): Promise<User> {
@@ -49,16 +56,16 @@ export class UserController {
   }
 
   @Patch('inactivate/:id')
-  @UseGuards(JwtAuthGuard, AuthGuard('jwt'), PermissionsGuard)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   async inactivateUser(
     @Param('id') id: string,
     @Request() req: any,
   ): Promise<void> {
-    if (req.user.id !== id) {
-      throw new ForbiddenException(
-        'Você não tem autorização para editar esse perfil',
-      );
-    }
+    // if (req.user.id !== id) {
+    //   throw new ForbiddenException(
+    //     'Você não tem autorização para editar esse perfil',
+    //   );
+    // }
     return this.userService.inactivateUser(id);
   }
 
@@ -97,4 +104,14 @@ export class UserController {
     }
     return this.userService.updatePersonalInfo(id, updateUserDto);
   }
+
+  @Patch('update/:id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDTO,
+  ): Promise<User> {
+    return this.userService.updatePersonalInfo(id, updateUserDto);
+  }
+
 }
