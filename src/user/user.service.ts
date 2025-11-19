@@ -132,6 +132,7 @@ export class UserService {
     await this.userRepository.save(userToActivate);
   }
 
+
   async deleteUser(id: string): Promise<void> {
     this.logger.log(`Deletando usuário com ID: ${id}`);
     const userToDelete = await this.getUserById(id);

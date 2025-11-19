@@ -21,6 +21,9 @@ export class Agenda{
     @ManyToOne(() => User, user => user.agenda)
     tecnico: User;
 
+    @ManyToOne(() => User, user => user.testesAbertos)
+    responsavel!: User;
+
     @Column({type: 'varchar', nullable: true})
     tecnicoCampo: string;
 
