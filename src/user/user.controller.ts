@@ -1,11 +1,18 @@
 import {
   Controller,
   ForbiddenException,
-  Req,
   Request,
   UseGuards,
+  // Decoradores e exceções necessários:
+  Post,
+  Get,
+  Param,
+  Delete,
+  Body,
+  Patch,
+  Query, // 👈 Agora importado corretamente
+  BadRequestException, // 👈 Importado para melhor tratamento de erros
 } from '@nestjs/common';
-import { Post, Get, Param, Delete, Body, Patch } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUsuarioDto } from './dto/createUsuarioDto.dto';
 import { UpdateUserDTO } from './dto/updateUsuarioDto.dto';
@@ -13,7 +20,8 @@ import { User } from './user.entity';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
-
+import { TechnicianAvailability } from './user.service';
+import { FormattedTechnicianAvailability } from './user.service';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -32,8 +40,25 @@ export class UserController {
 
   @Get('usuarios_ati')
   @UseGuards(JwtAuthGuard)
-  async getUsersAti() : Promise<User[]>{
-    return this.userService.getUserAti()
+  async getUsersAti(): Promise<User[]> {
+    return this.userService.getUserAti();
+  } // Rota: GET /user/availability?tag=suporte&data=2025-11-25
+
+  @Get('availability')
+  async getTeamAvailability(
+    @Query('tag') tag: string,
+    @Query('data') dataString: string,
+  ): Promise<FormattedTechnicianAvailability[]> {
+    // 👈 Mudança no tipo de retorno para o formato formatado
+    // Validação que garante que ambos os parâmetros foram fornecidos
+    if (!tag || !dataString) {
+      // Usando BadRequestException para retornar erro HTTP 400
+      throw new BadRequestException(
+        'A tag da equipe e a data são obrigatórias para consultar a disponibilidade.',
+      );
+    } // Chama a função do serviço
+
+    return this.userService.getAvaibleTimesPerTeam(tag, dataString);
   }
 
   @UseGuards(JwtAuthGuard)
