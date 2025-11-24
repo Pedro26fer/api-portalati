@@ -33,6 +33,13 @@ export class AgendaController {
     return await this.agendaService.getAllEvents();
   }
 
+  @UseGuards(JwtAuthGuard, AuthGuard('jwt'))
+  @Get('agenda_por_entidade')
+  async getEventByEntidade(@Request() req: any): Promise<Agenda[]>{
+    const userId = req.user.id 
+    return await this.agendaService.agendaPorEntidade(userId)
+  }
+
   @Get('my_events')
   @UseGuards(JwtAuthGuard)
   @UseGuards(AuthGuard('jwt'))
@@ -42,7 +49,7 @@ export class AgendaController {
     return myEvents;
   }
 
-  @Get('meus_agendamentos')
+  @Get('agendamentos_marcados')
   @UseGuards(JwtAuthGuard)
   async meus_agendamentos(@Request() req: any): Promise<Agenda[]>{
     const userId = req.user.id 
@@ -69,14 +76,14 @@ export class AgendaController {
     return events;
   }
 
-  @Get('cliente-agenda')
-  @UseGuards(JwtAuthGuard)
-  @UseGuards(AuthGuard('jwt'))
-  async getClienteAgenda(@Request() req: any): Promise<Agenda[]> {
-    const cliente = req.user.equipe.entidade.nome;
-    const agendamentos = await this.agendaService.agendaPorEntidade(cliente);
-    return agendamentos;
-  }
+  // @Get('cliente-agenda')
+  // @UseGuards(JwtAuthGuard)
+  // @UseGuards(AuthGuard('jwt'))
+  // async getClienteAgenda(@Request() req: any): Promise<Agenda[]> {
+  //   const cliente = req.user.equipe.entidade.nome;
+  //   const agendamentos = await this.agendaService.agendaPorEntidade(cliente);
+  //   return agendamentos;
+  // }
 
   @Delete('remove/:id')
   @UseGuards(JwtAuthGuard, AuthGuard('jwt'), PermissionsGuard)

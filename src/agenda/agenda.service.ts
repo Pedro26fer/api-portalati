@@ -1,11 +1,13 @@
-import { BadRequestException, Inject, NotFoundException } from '@nestjs/common';
 import {
+  BadRequestException,
   Injectable,
   NotAcceptableException,
   ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Agenda } from './agenda.entity';
 import { CreateEventDto } from './dto/createEvent.dto';
 import { UpdateEventDto } from './dto/updateEvent.dto';
@@ -13,6 +15,9 @@ import { Usina } from 'src/usina/usina.entity';
 import { Equipamentos } from 'src/equipamentos/equipamentos.entity';
 import { User } from 'src/user/user.entity';
 import { Entidade } from 'src/entidade/entidade.entity';
+import { UserService } from 'src/user/user.service';
+
+const BRASILia_OFFSET_HOURS = 3; // Brasília = UTC-3
 
 @Injectable()
 export class AgendaService {
@@ -25,60 +30,98 @@ export class AgendaService {
     private readonly equipamentoRepository: Repository<Equipamentos>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly userService: UserService,
     @InjectRepository(Entidade)
     private readonly entidadeRepository: Repository<Entidade>,
   ) {}
 
+  private toBrasiliaVirtualDate(utcDate: Date): Date {
+    const adjusted = utcDate.getTime() - BRASILia_OFFSET_HOURS * 60 * 60 * 1000;
+    return new Date(adjusted);
+  }
+
+  private parseLocalDate(dateString: string): Date {
+    if (!dateString) throw new ForbiddenException('A data é obrigatória');
+
+    const clean = dateString.replace(/Z$/, '');
+
+    const [datePart, timePart] = clean.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+
+    return new Date(year, month - 1, day, hour, minute, second || 0);
+  }
+
+  private getBrasiliaHour(dateUtc: Date): number {
+    return this.toBrasiliaVirtualDate(dateUtc).getUTCHours();
+  }
+
+  private getBrasiliaMinutes(dateUtc: Date): number {
+    return this.toBrasiliaVirtualDate(dateUtc).getUTCMinutes();
+  }
+
+  private getBrasiliaDayOfWeek(dateUtc: Date): number {
+    return this.toBrasiliaVirtualDate(dateUtc).getUTCDay();
+  }
+
+  private parseInputDateTime(input: string | Date): Date {
+    if (input instanceof Date) return input;
+    if (typeof input === 'string') {
+      return this.userService.parseDateTimeLocalToUTC(input);
+    }
+    return new Date('invalid date');
+  }
+
   private async checkConflito(
     tecnicoId: string,
-    tecnicoCampo: string,
-    eventId: string,
-    startDate: Date,
-    endDate: Date,
+    tecnicoCampo: string | undefined,
+    exceptEventId: string | null,
+    startDateUtc: Date,
+    endDateUtc: Date,
   ): Promise<void> {
-    const horaInicio = startDate.getHours();
-    const minutoInicio = startDate.getMinutes();
-    const horaFim = endDate.getHours();
-    const minutoFim = endDate.getMinutes();
+    const qb = this.agendaRepository.createQueryBuilder('agenda');
 
-    // Bloqueia fora do horário comercial (8h às 17h)
-    // Início: >= 8h E < 17h
-    // Fim: > 8h E <= 17h
-    if (
-      horaInicio < 8 ||
-      horaInicio > 17 ||
-      (horaFim === 17 && minutoFim > 0) ||
-      horaFim > 17 ||
-      horaFim < 8
-    ) {
-      // Simplificando o que você já tinha, mas melhor:
-      if (
-        horaInicio < 8 ||
-        horaInicio > 17 ||
-        horaFim < 8 ||
-        horaFim > 17 ||
-        (horaFim === 17 && minutoFim > 0)
-      ) {
-        throw new BadRequestException(
-          'O teste só pode ser marcado entre 08:00 e 17:00 (o fim deve ser até 17:00:00).',
-        );
-      }
+    qb.where(
+      '(agenda.tecnicoId = :tecnicoId OR agenda.tecnicoCampo = :tecnicoCampo)',
+      { tecnicoId, tecnicoCampo },
+    ).andWhere('(agenda.start < :end AND agenda.end > :start)', {
+      start: startDateUtc,
+      end: endDateUtc,
+    });
+
+    if (exceptEventId) {
+      qb.andWhere('agenda.id != :exceptEventId', { exceptEventId });
+    }
+
+    const conflito = await qb.getOne();
+
+    if (conflito) {
+      throw new ForbiddenException(
+        'Já existe um compromisso nesse horário para o técnico ou técnico de campo.',
+      );
     }
   }
 
-  private async checaDiasUteis(startDate: Date, endDate: Date): Promise<void> {
-    const horarioComercial =
-      startDate.getHours() >= 8 && endDate.getHours() <= 17;
-    if (!horarioComercial) {
+  private assertBusinessHoursAndWorkday(startUtc: Date, endUtc: Date): void {
+    const day = this.getBrasiliaDayOfWeek(startUtc);
+    if (day === 0 || day === 6) {
       throw new NotAcceptableException(
-        'Compromissos só podem ser agendados entre 08:00 e 17:00.',
+        'Compromissos só podem ser agendados em dias úteis (segunda a sexta).',
       );
     }
 
-    const diaUtil = startDate.getDay() !== 0 && startDate.getDay() !== 6;
-    if (!diaUtil) {
+    const startHour = this.getBrasiliaHour(startUtc);
+    const endHour = this.getBrasiliaHour(endUtc);
+    const endMinutes = this.getBrasiliaMinutes(endUtc);
+
+    if (
+      startHour < 8 ||
+      startHour >= 17 ||
+      endHour > 17 ||
+      (endHour === 17 && endMinutes > 0)
+    ) {
       throw new NotAcceptableException(
-        'Compromissos só podem ser agendados em dias úteis (segunda a sexta).',
+        'Compromissos só podem ser agendados entre 08:00 e 17:00 (Horário de Brasília).',
       );
     }
   }
@@ -88,8 +131,8 @@ export class AgendaService {
     createEventDto: CreateEventDto,
   ): Promise<Agenda> {
     const {
-      start,
-      end,
+      start: startInput,
+      end: endInput,
       tag,
       tecnicoEmail,
       tecnicoCampo,
@@ -107,59 +150,37 @@ export class AgendaService {
       throw new NotAcceptableException('Técnico não encontrado');
     }
 
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const now = new Date();
+    const startLocal = this.parseLocalDate(startInput);
+    const endLocal = this.parseLocalDate(endInput);
 
-    // 1. Checagem de ordem de datas
-    if (startDate >= endDate) {
+    if (isNaN(startLocal.getTime()) || isNaN(endLocal.getTime())) {
+      throw new BadRequestException('Formato de data e hora inválido.');
+    }
+
+    if (startLocal >= endLocal) {
       throw new NotAcceptableException(
         'A data de início deve ser anterior à data de término.',
       );
     }
 
-    if (startDate < now || endDate < now) {
+    const nowLocal = new Date();
+    if (startLocal < nowLocal || endLocal < nowLocal) {
       throw new NotAcceptableException('Datas inválidas (passadas).');
     }
 
-    // 🎯 NOVA CHECAGEM: DURAÇÃO MÁXIMA DE 3 HORAS
-    const durationInMilliseconds = endDate.getTime() - startDate.getTime();
-    const threeHoursInMilliseconds = 3 * 60 * 60 * 1000;
+    this.assertBusinessHoursAndWorkday(startLocal, endLocal);
 
-    if (durationInMilliseconds > threeHoursInMilliseconds) {
-      throw new BadRequestException(
-        'O teste não pode ter duração superior a 3 horas.',
-      );
-    }
-    // ----------------------------------------------------
-
-    // 🔒 Verifica conflitos de horário para técnico principal OU técnico de campo
-    const conflito = await this.agendaRepository
-      .createQueryBuilder('agenda')
-      .where(
-        '(agenda.tecnicoId = :tecnicoId OR agenda.tecnicoCampo = :tecnicoCampo)',
-        {
-          tecnicoId: tecnicoUser.id,
-          tecnicoCampo,
-        },
-      )
-      .andWhere('(agenda.start < :end AND agenda.end > :start)', {
-        start: startDate,
-        end: endDate,
-      })
-      .getOne();
-
-    if (conflito) {
-      throw new ForbiddenException(
-        'Já existe um compromisso nesse horário para o técnico ou técnico de campo.',
-      );
-    }
-
-    await this.checaDiasUteis(startDate, endDate);
+    await this.checkConflito(
+      tecnicoUser.id,
+      tecnicoCampo,
+      null,
+      startLocal,
+      endLocal,
+    );
 
     const newEvent = this.agendaRepository.create({
-      start: startDate,
-      end: endDate,
+      start: startLocal,
+      end: endLocal,
       tag,
       tecnico: tecnicoUser,
       tecnicoCampo,
@@ -170,29 +191,43 @@ export class AgendaService {
       equipamento,
     });
 
-    return await this.agendaRepository.save(newEvent);
+    return await this.agendaRepository.save({
+      ...newEvent,
+      start: newEvent.start.toLocaleString('sv-SE').replace(' ', 'T'),
+      end: newEvent.end.toLocaleString('sv-SE').replace(' ', 'T'),
+    });
   }
 
   async getAllEvents(): Promise<Agenda[]> {
-    return await this.agendaRepository.find({ relations: ['tecnico'] });
+    const agendamentos = await this.agendaRepository.find({
+      relations: ['tecnico'],
+    });
+
+    agendamentos.forEach((ag) => {
+      ag.start = new Date(ag.start.getTime() - 3 * 60 * 60 * 1000);
+      ag.end = new Date(ag.end.getTime() - 3 * 60 * 60 * 1000);
+    });
+
+    return agendamentos;
   }
 
-  async getEventByResponsavelPelaAbertura(id: string): Promise<Agenda[]>{
-    const loggedUser = await this.userRepository.findOne({where:{id}})
-    if(!loggedUser){
-      throw new ForbiddenException('Usuário logado não encontrado')
+  async getEventByResponsavelPelaAbertura(id: string): Promise<Agenda[]> {
+    const loggedUser = await this.userRepository.findOne({ where: { id }});
+    if (!loggedUser) {
+      throw new ForbiddenException('Usuário logado não encontrado');
     }
+
     const eventsOpenedForTheLoggedUser = await this.agendaRepository.find({
       where: {
-        responsavel: loggedUser
+        responsavel: {id}
       }
-    })
+    });
 
-    if(!eventsOpenedForTheLoggedUser){
-      throw new NotFoundException('Eventos não encontrados')
+    if (!eventsOpenedForTheLoggedUser) {
+      throw new NotFoundException('Eventos não encontrados');
     }
 
-    return eventsOpenedForTheLoggedUser
+    return eventsOpenedForTheLoggedUser;
   }
 
   async getEventById(id: string) {
@@ -240,27 +275,24 @@ export class AgendaService {
       relations: ['tecnico'],
     });
 
-    if (!usersEvent) {
+    if (!usersEvent || usersEvent.length === 0) {
       throw new NotFoundException('Nenhum agendamento encontrado');
     }
 
     return usersEvent;
   }
 
-  async agendaPorEntidade(entidadeNome: string): Promise<Agenda[]> {
-    // const entidade = await this.entidadeRepository.findOne({
-    //   where: { nome: entidadeNome },
-    // });
+  async agendaPorEntidade(id: string): Promise<Agenda[]> {
+    const loggedUser = await this.userRepository.findOne({where: {id}, relations: ['equipe', 'equipe.entidade']})
+    if(!loggedUser){
+      throw new UnauthorizedException("Reinicie a sessão")
+    }
+    const entidadeDoUsuarioLogado = loggedUser.equipe.entidade.nome
+    console.log(entidadeDoUsuarioLogado)
 
-    // if (!entidade) {
-    //   throw new NotFoundException('Entidade não encontrada');
-    // }
+    const eventsByEntidade = this.agendaRepository.find({where: {cliente: entidadeDoUsuarioLogado}, relations: ['tecnico']})
 
-    const entidadeAgenda = await this.agendaRepository.find({
-      where: { cliente: entidadeNome },
-    });
-
-    return entidadeAgenda;
+    return eventsByEntidade;
   }
 
   async deleteEvent(eventId: string): Promise<void> {
@@ -279,51 +311,68 @@ export class AgendaService {
     eventId: string,
     updateEventoDto: UpdateEventDto,
   ): Promise<Agenda> {
-    // Buscar evento do usuário logado
-    //     const eventosDoUsuario = await this.findEventsByUserId(user.id);
-    //     const eventoToUpdate = eventosDoUsuario.find((e) => e.id === eventId);
     const eventoToUpdate = await this.getEventById(eventId);
 
     if (!eventoToUpdate) {
       throw new NotFoundException('Evento não encontrado para esse usuário');
     }
 
-    // Datas atualizadas
-    const startDate = updateEventoDto.start
-      ? new Date(updateEventoDto.start)
+    // Se vierem novas datas como string, parseamos como BRT -> UTC.
+    const startUtc = updateEventoDto.start
+      ? this.parseInputDateTime(updateEventoDto.start)
       : new Date(eventoToUpdate.start);
-    const endDate = updateEventoDto.end
-      ? new Date(updateEventoDto.end)
+
+    const endUtc = updateEventoDto.end
+      ? this.parseInputDateTime(updateEventoDto.end)
       : new Date(eventoToUpdate.end);
 
-    if (startDate >= endDate) {
+    if (isNaN(startUtc.getTime()) || isNaN(endUtc.getTime())) {
+      throw new BadRequestException('Formato de data e hora inválido.');
+    }
+
+    if (startUtc.getTime() >= endUtc.getTime()) {
       throw new BadRequestException(
         'A data de início deve ser anterior à data de término',
       );
     }
 
-    await this.checaDiasUteis(startDate, endDate);
+    // dia útil + horário comercial (BRT)
+    this.assertBusinessHoursAndWorkday(startUtc, endUtc);
 
     const tecnicoATI = await this.userRepository.findOne({
       where: { email: updateEventoDto.tecnicoEmail },
     });
-    const { tecnicoCampo } = updateEventoDto;
 
     if (!tecnicoATI) {
       throw new NotFoundException('Tecnico ATI não encontrado');
     }
-    const tecnicoCampoParaChecar = tecnicoCampo ?? eventoToUpdate.tecnicoCampo;
 
+    const tecnicoCampoParaChecar =
+      updateEventoDto.tecnicoCampo ?? eventoToUpdate.tecnicoCampo;
+
+    // checa conflito excluindo o próprio evento
     await this.checkConflito(
       tecnicoATI.id,
       tecnicoCampoParaChecar,
       eventId,
-      startDate,
-      endDate,
+      startUtc,
+      endUtc,
     );
 
-    Object.assign(eventoToUpdate, updateEventoDto);
-    if (tecnicoCampo) eventoToUpdate.tecnicoCampo = tecnicoCampo;
+    // aplica mudanças (mantendo objetos Date UTC)
+    eventoToUpdate.start = startUtc;
+    eventoToUpdate.end = endUtc;
+    if (updateEventoDto.tecnicoCampo)
+      eventoToUpdate.tecnicoCampo = updateEventoDto.tecnicoCampo;
+    if (updateEventoDto.tecnicoEmail) eventoToUpdate.tecnico = tecnicoATI;
+    // aplica outras propriedades do DTO (cliente, status, equipamento, etc.)
+    Object.assign(eventoToUpdate, {
+      tag: updateEventoDto.tag ?? eventoToUpdate.tag,
+      cliente: updateEventoDto.cliente ?? eventoToUpdate.cliente,
+      usina: updateEventoDto.usina ?? eventoToUpdate.usina,
+      status: updateEventoDto.status ?? eventoToUpdate.status,
+      equipamento: updateEventoDto.equipamento ?? eventoToUpdate.equipamento,
+    });
 
     return await this.agendaRepository.save(eventoToUpdate);
   }
