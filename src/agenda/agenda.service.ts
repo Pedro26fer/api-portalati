@@ -126,77 +126,95 @@ export class AgendaService {
     }
   }
 
-  async createEvent(
-    userLogado: User,
-    createEventDto: CreateEventDto,
-  ): Promise<Agenda> {
-    const {
-      start: startInput,
-      end: endInput,
-      tag,
-      tecnicoEmail,
-      tecnicoCampo,
-      cliente,
-      usina,
-      status,
-      equipamento,
-    } = createEventDto;
+async createEvent(
+  userLogado: User,
+  createEventDto: CreateEventDto,
+): Promise<Agenda> {
 
-    const tecnicoUser = await this.userRepository.findOne({
-      where: { email: tecnicoEmail },
-    });
+  const {
+    start: startInput,
+    end: endInput,
+    tag,
+    tecnicoCampo,
+    cliente,
+    usina,
+    status,
+    equipamento,
+  } = createEventDto;
 
-    if (!tecnicoUser) {
-      throw new NotAcceptableException('Técnico não encontrado');
-    }
+  const startLocal = this.parseLocalDate(startInput);
+  const endLocal = this.parseLocalDate(endInput);
 
-    const startLocal = this.parseLocalDate(startInput);
-    const endLocal = this.parseLocalDate(endInput);
-
-    if (isNaN(startLocal.getTime()) || isNaN(endLocal.getTime())) {
-      throw new BadRequestException('Formato de data e hora inválido.');
-    }
-
-    if (startLocal >= endLocal) {
-      throw new NotAcceptableException(
-        'A data de início deve ser anterior à data de término.',
-      );
-    }
-
-    const nowLocal = new Date();
-    if (startLocal < nowLocal || endLocal < nowLocal) {
-      throw new NotAcceptableException('Datas inválidas (passadas).');
-    }
-
-    this.assertBusinessHoursAndWorkday(startLocal, endLocal);
-
-    await this.checkConflito(
-      tecnicoUser.id,
-      tecnicoCampo,
-      null,
-      startLocal,
-      endLocal,
-    );
-
-    const newEvent = this.agendaRepository.create({
-      start: startLocal,
-      end: endLocal,
-      tag,
-      tecnico: tecnicoUser,
-      tecnicoCampo,
-      responsavel: userLogado,
-      cliente,
-      usina,
-      status,
-      equipamento,
-    });
-
-    return await this.agendaRepository.save({
-      ...newEvent,
-      start: newEvent.start.toLocaleString('sv-SE').replace(' ', 'T'),
-      end: newEvent.end.toLocaleString('sv-SE').replace(' ', 'T'),
-    });
+  if (isNaN(startLocal.getTime()) || isNaN(endLocal.getTime())) {
+    throw new BadRequestException('Formato de data inválido.');
   }
+
+  if (startLocal >= endLocal) {
+    throw new NotAcceptableException('A data de início deve ser anterior ao fim.');
+  }
+
+  const now = new Date();
+  if (startLocal < now) {
+    throw new NotAcceptableException('Data já passou.');
+  }
+
+  this.assertBusinessHoursAndWorkday(startLocal, endLocal);
+
+  const dia = startLocal.toISOString().split("T")[0];
+
+  const availability = await this.userService.getAvaibleTimesPerTeam(tag, dia);
+
+  if (!availability || availability.length === 0) {
+    throw new NotAcceptableException('Nenhum técnico disponível nesse assunto.');
+  }
+
+  // Encontrar técnicos disponíveis naquele horário
+  const tecnicosDisponiveis = [];
+
+  for (const tecnico of availability) {
+    for (const slot of tecnico.freeSlots) {
+
+      const slotStart = new Date(`${dia}T${slot.start}`);
+      const slotEnd   = new Date(`${dia}T${slot.end}`);
+
+      if (startLocal >= slotStart && endLocal <= slotEnd) {
+        tecnicosDisponiveis.push(tecnico);
+      }
+    }
+  }
+
+  if (tecnicosDisponiveis.length === 0) {
+    throw new NotAcceptableException("Nenhum técnico disponível no horário solicitado.");
+  }
+
+  const escolhido = tecnicosDisponiveis[
+    Math.floor(Math.random() * tecnicosDisponiveis.length)
+  ];
+
+  const tecnicoEscolhido = await this.userRepository.findOne({
+    where: { id: escolhido.tecnicoId },
+  });
+
+  if (!tecnicoEscolhido) {
+    throw new NotAcceptableException("Erro ao buscar técnico escolhido.");
+  }
+
+  const newEvent = this.agendaRepository.create({
+    start: startLocal,
+    end: endLocal,
+    tag,
+    tecnico: tecnicoEscolhido,
+    tecnicoCampo,
+    responsavel: userLogado,
+    cliente,
+    usina,
+    status,
+    equipamento,
+  });
+
+  return await this.agendaRepository.save(newEvent);
+}
+
 
   async getAllEvents(): Promise<Agenda[]> {
     const agendamentos = await this.agendaRepository.find({
@@ -212,15 +230,15 @@ export class AgendaService {
   }
 
   async getEventByResponsavelPelaAbertura(id: string): Promise<Agenda[]> {
-    const loggedUser = await this.userRepository.findOne({ where: { id }});
+    const loggedUser = await this.userRepository.findOne({ where: { id } });
     if (!loggedUser) {
       throw new ForbiddenException('Usuário logado não encontrado');
     }
 
     const eventsOpenedForTheLoggedUser = await this.agendaRepository.find({
       where: {
-        responsavel: {id}
-      }
+        responsavel: { id },
+      },
     });
 
     if (!eventsOpenedForTheLoggedUser) {
@@ -283,14 +301,20 @@ export class AgendaService {
   }
 
   async agendaPorEntidade(id: string): Promise<Agenda[]> {
-    const loggedUser = await this.userRepository.findOne({where: {id}, relations: ['equipe', 'equipe.entidade']})
-    if(!loggedUser){
-      throw new UnauthorizedException("Reinicie a sessão")
+    const loggedUser = await this.userRepository.findOne({
+      where: { id },
+      relations: ['equipe', 'equipe.entidade'],
+    });
+    if (!loggedUser) {
+      throw new UnauthorizedException('Reinicie a sessão');
     }
-    const entidadeDoUsuarioLogado = loggedUser.equipe.entidade.nome
-    console.log(entidadeDoUsuarioLogado)
+    const entidadeDoUsuarioLogado = loggedUser.equipe.entidade.nome;
+    console.log(entidadeDoUsuarioLogado);
 
-    const eventsByEntidade = this.agendaRepository.find({where: {cliente: entidadeDoUsuarioLogado}, relations: ['tecnico']})
+    const eventsByEntidade = this.agendaRepository.find({
+      where: { cliente: entidadeDoUsuarioLogado },
+      relations: ['tecnico'],
+    });
 
     return eventsByEntidade;
   }

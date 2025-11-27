@@ -18,10 +18,10 @@ export class Agenda{
     @Column({type: 'varchar', nullable: false})
     tag: string;
 
-    @ManyToOne(() => User, user => user.agenda)
+    @ManyToOne(() => User, user => user.agenda, {nullable: true, onDelete: 'SET NULL'})
     tecnico: User;
 
-    @ManyToOne(() => User, user => user.testesAbertos)
+    @ManyToOne(() => User, user => user.testesAbertos, {nullable: true, onDelete: 'SET NULL'})
     responsavel!: User;
 
     @Column({type: 'varchar', nullable: true})
@@ -33,10 +33,10 @@ export class Agenda{
     @Column({type: 'varchar', nullable: false})
     usina: string;
 
-    @Column({type: 'varchar', nullable: false})
+    @Column({type: 'varchar', nullable: false, default: "Pendente"})
     status: string;
 
-    @Column({type: 'varchar', nullable: true})
+    @Column({type: 'varchar', nullable: true, default: ""})
     description!: string;
 
     @Column({type: 'varchar', nullable: false})

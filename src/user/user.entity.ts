@@ -51,7 +51,7 @@ export class User {
   @OneToMany(() => Agenda, (agenda) => agenda.responsavel)
   testesAbertos!: Agenda[];
 
-  @ManyToOne(() => Equipe, (equipe) => equipe.integrantes, { onDelete: 'CASCADE' , nullable:true})
+  @ManyToOne(() => Equipe, (equipe) => equipe.integrantes, { onDelete: 'SET NULL' , nullable: true})
   @JoinColumn({name: 'equipe_id'})
   equipe!: Equipe;
 

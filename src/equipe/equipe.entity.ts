@@ -15,22 +15,22 @@ export class Equipe {
     @Column()
     nivel: number;
 
-    @ManyToOne(() => Entidade, (entidade) => entidade.equipes,)
+    @ManyToOne(() => Entidade, (entidade) => entidade.equipes, {onDelete: 'CASCADE'})
     entidade: Entidade;
 
     @OneToMany(() => User, (user) => user.equipe, {cascade: true})
     integrantes!: User[];
 
-    @OneToOne(() => User, (supervisor) => supervisor.equipe_supervisionada)
+    @OneToOne(() => User, (supervisor) => supervisor.equipe_supervisionada, {onDelete: 'SET NULL', nullable: true})
     @JoinColumn({name: 'supervisor_id'})
     supervisor!: User;
 
     @Expose()
-    @OneToMany(() => Equipe, equipe => equipe.parent_equipe, {nullable: true})
+    @OneToMany(() => Equipe, equipe => equipe.parent_equipe, {nullable: true, onDelete: 'CASCADE'})
     sub_equipes!: Equipe[];
 
     @Expose()
-    @ManyToOne(() => Equipe, equipe => equipe.sub_equipes, {nullable: true})
+    @ManyToOne(() => Equipe, equipe => equipe.sub_equipes, {nullable: true, onDelete: 'SET NULL'})
     @JoinColumn({name: 'equipe_pai'})
     parent_equipe!: Equipe;
 

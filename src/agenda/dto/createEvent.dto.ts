@@ -12,6 +12,7 @@ export class CreateEventDto {
     @IsString({message: 'A tag deve ser uma string'})
     tag!: string;
 
+    @IsOptional()
     @IsEmail({}, {message: 'O email do técnico deve ser um email válido'})
     tecnicoEmail!: string;
 
@@ -24,6 +25,7 @@ export class CreateEventDto {
     @IsString({message: 'A usina deve ser uma string'})
     usina!: string;
 
+    @IsOptional()
     @IsString({message: 'O status deve ser uma string'})
     status!: string;
 
