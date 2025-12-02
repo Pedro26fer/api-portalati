@@ -25,7 +25,7 @@ export class CreateEntidadeDto {
   logo?: string;
 
   @ApiProperty({
-    description: 'Link para acesso à entidade. Deve ser único.',
+    description: 'Link para acesso à entidade.',
     example: 'https://portal.usina-alvorada.com',
   })
   @IsNotEmpty({ message: 'O link é obrigatório' })

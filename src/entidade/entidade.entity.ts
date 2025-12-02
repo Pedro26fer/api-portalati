@@ -38,7 +38,7 @@ export class Entidade {
     description: 'Link de acesso ao painel da entidade',
     example: 'https://solartech.com.br/dashboard',
   })
-  @Column({ type: 'varchar', nullable: false, unique: true })
+  @Column({ type: 'varchar', nullable: false })
   link: string;
 
   @ApiProperty({

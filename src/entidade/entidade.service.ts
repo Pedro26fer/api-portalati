@@ -46,14 +46,6 @@ export class EntidadeService {
       throw new ForbiddenException('Já existe uma entidade com esse logo');
     }
 
-    const linkAlredyExists = await this.entidadeRepository.findOne({
-      where: { link },
-    });
-
-    if (linkAlredyExists) {
-      throw new ForbiddenException('Já existe uma entidade com esse link');
-    }
-
     const newDataDto = {...createEntidadeDto, nome: nome.toUpperCase()}
 
     const newEntidade = this.entidadeRepository.create(newDataDto);
