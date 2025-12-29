@@ -11,4 +11,11 @@ export class UpdateEventDto extends PartialType(CreateEventDto) {
   @IsOptional()
   @IsEmail({}, { message: 'O email do técnico deve ser um email válido' })
   tecnicoEmail!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'ID da usina onde o evento será realizado, caso seja necessário alterar a usina do evento.',
+  })
+  @IsOptional()
+  usinaNome!: string;
 }

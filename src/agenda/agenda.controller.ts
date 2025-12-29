@@ -21,14 +21,14 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}
 
-  @Post('create')
+  @Post('create/:id')
   @ApiOperation({ summary: 'Create a new event' })
   @ApiResponse({ status: 201, description: 'The event has been successfully created.', type: Agenda })
   @ApiResponse({ status: 406, description: 'Not Acceptable.' })
   @UseGuards(JwtAuthGuard, AuthGuard('jwt'))
-  async createEvent(@Request() req: any, @Body() createEventDto: CreateEventDto): Promise<Agenda> {
+  async createEvent(@Param('id') id: string, @Request() req: any, @Body() createEventDto: CreateEventDto): Promise<Agenda> {
     const userLogado = req.user
-    return await this.agendaService.createEvent(userLogado, createEventDto);
+    return await this.agendaService.createEvent(userLogado, createEventDto, id);
   }
 
   @ApiOperation({ summary: 'Get all events' })

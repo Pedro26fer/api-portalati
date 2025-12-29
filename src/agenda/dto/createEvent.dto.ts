@@ -31,19 +31,12 @@ export class CreateEventDto {
     @IsString({ message: "O nome do técnico de campo deve ser uma string" })
     tecnicoCampo!: string;
 
-    @ApiProperty({
-        description: 'Nome do cliente relacionado ao evento',
-        example: 'Cliente XPTO Ltda',
-    })
-    @IsString({ message: 'O cliente deve ser uma string' })
-    cliente!: string;
-
-    @ApiProperty({
-        description: 'Nome da usina onde o evento será realizado',
-        example: 'Usina Solar Horizonte',
-    })
-    @IsString({ message: 'A usina deve ser uma string' })
-    usina!: string;
+    // @ApiProperty({
+    //     description: 'Nome do cliente relacionado ao evento',
+    //     example: 'Cliente XPTO Ltda',
+    // })
+    // @IsString({ message: 'O cliente deve ser uma string' })
+    // cliente!: string;
 
     @ApiPropertyOptional({
         description: 'Status inicial do evento (opcional)',

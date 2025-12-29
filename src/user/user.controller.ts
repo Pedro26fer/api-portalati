@@ -35,7 +35,8 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   // ======================================================================================
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  // @UseGuards(JwtAuthGuard, PermissionsGuard)
+  
   @Post('sign_up')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Criar um novo usuário' })

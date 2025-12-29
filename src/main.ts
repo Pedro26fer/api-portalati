@@ -33,11 +33,11 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  SwaggerModule.setup('docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  // SwaggerModule.setup('docs', app, document, {
+  //   swaggerOptions: { persistAuthorization: true },
+  // });
 
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT || 4001;
   await app.listen(port, '0.0.0.0');
   console.log(`📚 API disponível em: http://localhost:${port}/api`);
 }
