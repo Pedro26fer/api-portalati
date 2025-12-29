@@ -1,3 +1,4 @@
+import { Agenda } from 'src/agenda/agenda.entity';
 import { Usina } from 'src/usina/usina.entity';
 import {
   Entity,
@@ -6,6 +7,7 @@ import {
   OneToMany,
   Column,
   PrimaryGeneratedColumn,
+  ManyToMany,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -47,6 +49,9 @@ export class Equipamentos {
 
   @OneToMany(() => Equipamentos, (equipamento) => equipamento.pai)
   filhos?: Equipamentos[];
+
+  @ManyToMany(() => Agenda, (agenda) => agenda.equipamentos)
+  agendamentos?: Agenda[];
 
   constructor(
     nome: string,

@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Agenda } from './agenda.entity';
 import { CreateEventDto } from './dto/createEvent.dto';
 import { UpdateEventDto } from './dto/updateEvent.dto';
@@ -146,11 +146,21 @@ export class AgendaService {
       start: startInput,
       end: endInput,
       tag,
+      ipEquipamentos,
       tecnicoCampo,
       status,
-      equipamento,
     } = createEventDto;
 
+    const equipamentos = await this.equipamentoRepository.find({
+      where: {
+        ipLocal: In(ipEquipamentos),
+        usina: { id: usinaAlvo.id },
+      },
+    })
+
+    if (equipamentos.length !== ipEquipamentos.length) {
+      throw new NotFoundException('Um ou mais equipamentos não foram encontrados na usina especificada.');
+    }
     const startLocal = this.parseLocalDate(startInput);
     const endLocal = this.parseLocalDate(endInput);
 
@@ -227,7 +237,7 @@ export class AgendaService {
       cliente: cliente,
       usina: usinaAlvo,
       status,
-      equipamento,
+      equipamentos
     });
 
     return await this.agendaRepository.save(newEvent);
@@ -335,7 +345,7 @@ export class AgendaService {
       : null;
     console.log(entidadeDoUsuarioLogado);
 
-    if(!entidadeDoUsuarioLogado){
+    if (!entidadeDoUsuarioLogado) {
       throw new NotFoundException('Entidade do usuário logado não encontrada');
     }
 
@@ -433,7 +443,7 @@ export class AgendaService {
     Object.assign(eventoToUpdate, {
       tag: updateEventoDto.tag ?? eventoToUpdate.tag,
       status: updateEventoDto.status ?? eventoToUpdate.status,
-      equipamento: updateEventoDto.equipamento ?? eventoToUpdate.equipamento,
+      equipamentos: updateEventoDto.ipEquipamentos ?? eventoToUpdate.equipamentos,
     });
 
     return await this.agendaRepository.save(eventoToUpdate);

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail } from "class-validator";
+import { IsString, IsOptional, IsEmail, IsArray } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateEventDto {
@@ -31,12 +31,12 @@ export class CreateEventDto {
     @IsString({ message: "O nome do técnico de campo deve ser uma string" })
     tecnicoCampo!: string;
 
-    // @ApiProperty({
-    //     description: 'Nome do cliente relacionado ao evento',
-    //     example: 'Cliente XPTO Ltda',
-    // })
-    // @IsString({ message: 'O cliente deve ser uma string' })
-    // cliente!: string;
+    @ApiProperty({
+        description: 'Ip do(s) equipamento(s) relacionado(s) ao evento',
+        example: '192.168.100.100, 192.168.100.101',
+    })
+    @IsArray({ message: 'Os IPs devem ser um array de strings' })
+    ipEquipamentos!: string[];
 
     @ApiPropertyOptional({
         description: 'Status inicial do evento (opcional)',
@@ -45,13 +45,6 @@ export class CreateEventDto {
     @IsOptional()
     @IsString({ message: 'O status deve ser uma string' })
     status!: string;
-
-    @ApiProperty({
-        description: 'Nome do equipamento relacionado ao evento',
-        example: 'Inversor SMA 30kW',
-    })
-    @IsString({ message: 'O equipamento deve ser uma string' })
-    equipamento!: string;
 
     @ApiPropertyOptional({
         description: 'Descrição adicional do evento (opcional)',
