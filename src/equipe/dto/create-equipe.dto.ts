@@ -31,9 +31,9 @@ export class CreateEquipeDto {
     description: 'E-mail do supervisor responsável pela equipe.',
     example: 'joao.supervisor@empresa.com',
   })
-  @IsNotEmpty({ message: 'O supervisor não pode ser vazio' })
+  @IsOptional()
   @IsString({ message: 'O supervisor deve ser uma string' })
-  supervisor!: string;
+  supervisor?: string;
 
   @ApiPropertyOptional({
     description: 'Nome da equipe pai, caso exista hierarquia.',
