@@ -54,11 +54,50 @@ export class EntidadeService {
     return await this.entidadeRepository.save(newEntidade);
   }
 
-  async findAll(): Promise<Entidade[]> {
+  async findAll(search?: string): Promise<Entidade[]> {
     this.logger.log('Listando todas as entidades');
-    return await this.entidadeRepository.find({
-      relations: ['equipes', 'equipes.sub_equipes', 'equipes.supervisor'],
-    });
+    const qb= this.entidadeRepository
+      .createQueryBuilder('entidade')
+      .leftJoinAndSelect('entidade.equipes', 'equipe');
+
+    if (search) {
+      qb.andWhere('LOWER(entidade.nome) LIKE :search', {
+        search: `%${search.toLowerCase()}%`,
+      });
+    }
+    return qb
+      .orderBy('entidade.nome', 'ASC')
+      .getMany();
+  }
+
+  async findActives(): Promise<Entidade[]> {
+    this.logger.log('Listando todas as entidades ativas (Informações filtradas)');
+    return await this.entidadeRepository
+      .createQueryBuilder('entidade')
+      .select([
+        'entidade.id',
+        'entidade.nome',
+        'entidade.link',
+        'entidade.ativo',
+      ])
+      .where('entidade.ativo = :ativo', { ativo: true })
+      .orderBy('entidade.nome', 'ASC')
+      .getMany();
+  }
+
+  async findInactives(): Promise<Entidade[]> {
+    this.logger.log('Listando todas as entidades ativas (Informações filtradas)');
+    return await this.entidadeRepository
+        .createQueryBuilder('entidade')
+        .select([
+          'entidade.id',
+          'entidade.nome',
+          'entidade.link',
+          'entidade.ativo',
+        ])
+        .where('entidade.ativo = :ativo', { ativo: false })
+        .orderBy('entidade.nome', 'ASC')
+        .getMany();
   }
 
   async profile(id: string): Promise<Entidade> {

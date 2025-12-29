@@ -6,7 +6,7 @@ import {
   Param,
   Delete,
   Body,
-  UseGuards,
+  UseGuards, Query,
 } from '@nestjs/common';
 import { EntidadeService } from './entidade.service';
 import { CreateEntidadeDto } from './dto/createEntidade.dto';
@@ -22,6 +22,7 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
+import * as sea from "node:sea";
 
 @ApiTags('entidade')
 @Controller('entidade')
@@ -63,8 +64,42 @@ export class EntidadeController {
     description: 'Lista de entidades retornada com sucesso',
     type: [Entidade],
   })
-  async findAll(): Promise<Entidade[]> {
-    return await this.entidadeService.findAll();
+  async findAll(
+      @Query('search') search?: string
+  ): Promise<Entidade[]> {
+    return await this.entidadeService.findAll(search);
+  }
+
+  @Get('actives')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Lista todas as entidades cadastradas que estão ativas',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de entidades ativas retornada com sucesso',
+    type: [Entidade],
+  })
+  async findActives(): Promise<Entidade[]> {
+    return await this.entidadeService.findActives();
+  }
+
+  @Get('inactives')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+        'Lista todas as entidades cadastradas que estão inativas',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de entidades inativas retornada com sucesso',
+    type: [Entidade],
+  })
+  async findInactives(): Promise<Entidade[]> {
+    return await this.entidadeService.findInactives();
   }
 
   @Get('profile/:id')
