@@ -170,7 +170,7 @@ export class EquipeService {
     // Atualiza o supervisor, se enviado
     if (updateEquipeDto.supervisor) {
       const supervisor = await this.userRepository.findOne({
-        where: { pNome: updateEquipeDto.supervisor },
+        where: { email: updateEquipeDto.supervisor },
       });
 
       if (!supervisor) {
@@ -188,6 +188,9 @@ export class EquipeService {
       }
 
       equipe.supervisor = supervisor;
+      equipe.integrantes.filter((user) => user.id === supervisor.id).length === 0
+        ? equipe.integrantes.push(supervisor)
+        : null;
     }
 
     // Atualiza a entidade, se enviada
