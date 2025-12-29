@@ -42,15 +42,15 @@ export class EquipeService {
     }
     newEquipe.entidade = entidadeReal;
 
-    const supervisorName = await this.userRepository.findOne({
-      where: { email: supervisor },
-    });
+    //const supervisorName = await this.userRepository.findOne({
+    //  where: { email: supervisor },
+    //});
 
-    if (!supervisorName) {
-      throw new NotFoundException('Supervisor não encontrado');
-    }
+    //if (!supervisorName) {
+    //  throw new NotFoundException('Supervisor não encontrado');
+    //}
 
-    newEquipe.supervisor = supervisorName;
+    //newEquipe.supervisor = supervisorName;
 
     const equipeAlreadyExists = await this.equipeRepository.findOne({
       where: { nome },
@@ -70,17 +70,17 @@ export class EquipeService {
 
       newEquipe.parent_equipe = parentEquip;
 
-      if (parentEquip.supervisor == supervisorName) {
-        throw new ForbiddenException(
-          'O supervisor não pode ser o mesmo da equipe pai',
-        );
-      }
+    //  if (parentEquip.supervisor == supervisorName) {
+    //    throw new ForbiddenException(
+    //      'O supervisor não pode ser o mesmo da equipe pai',
+    //    );
+    //  }
     }
     const savedEquipe = await this.equipeRepository.save(newEquipe);
 
-    supervisorName.equipe_supervisionada = savedEquipe;
-    supervisorName.equipe = savedEquipe;
-    await this.userRepository.save(supervisorName);
+    //supervisorName.equipe_supervisionada = savedEquipe;
+    //supervisorName.equipe = savedEquipe;
+    //await this.userRepository.save(supervisorName);
 
     return plainToInstance(Equipe, savedEquipe, {
       excludeExtraneousValues: true,
@@ -102,7 +102,7 @@ export class EquipeService {
   async findById(id: string): Promise<Equipe> {
     const equipe = await this.equipeRepository.findOne({
       where: { id },
-      relations: ['entidade', 'supervisor', 'integrantes', 'sub_equipes'],
+      relations: ['entidade', 'supervisor', 'integrantes', 'sub_equipes', 'parent_equipe'],
     });
     if (!equipe) {
       throw new NotFoundException('Equipe não encontrada');
